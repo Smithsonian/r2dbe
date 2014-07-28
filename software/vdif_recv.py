@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 import sys, socket, struct
 
-UDP_IP = "192.168.10.30"
+UDP_IP = "192.168.1.3"
 UDP_PORT = 4001
 
 sock = socket.socket(socket.AF_INET, # Internet
@@ -16,13 +16,13 @@ for i in range(int(sys.argv[1])):
     print "received packet %d" % i
     print "received header: "
     for h in range(8):
-        print "{:4d}: 0x{:08X}".format(h, header[h])
+        print "{0:4d}: 0x{1:08X}".format(h, header[h])
     print
     print "received data: "
     for d in range(8):
-        print "{:4d}: 0x{:08X}".format(d, data[d])
+        print "{0:4d}: 0x{1:08X}".format(d, data[d])
     print ". . . . . . . ."
     for d in range(len(data)-8, len(data)):
-        print "{:4d}: 0x{:08X}".format(d, data[d])
+        print "{0:4d}: 0x{1:08X}".format(d, data[d])
     print 
     print
