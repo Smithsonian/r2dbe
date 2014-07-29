@@ -30,7 +30,7 @@ for i in range(int(sys.argv[1])):
     #########
     i1         = (header[0]>>31) & (1)
     l1         = (header[0]>>30) & (1)
-    sec_ref_ep = (header[0]>>2)  & (2**30-1)
+    sec_ref_ep = (header[0])  & (2**30-1)
 
     print "W0:   Invalid data          : %d" %(i1)
     print "      Legacy mode           : %d" %(l1)
@@ -39,7 +39,7 @@ for i in range(int(sys.argv[1])):
     #########
     #   W1
     #########
-    ref_ep    = (header[1]>>24) & (2**30-1)
+    ref_ep    = (header[1]>>24) & (2**6-1)
     data_frame= (header[1])     & (2**24-1)
 
     print "W1:   Reference Epoch       : %d" %(ref_ep)
@@ -48,7 +48,7 @@ for i in range(int(sys.argv[1])):
     #########
     #   W2
     #########
-    v3   = (header[2]>>29) & (2**29-1)
+    v3   = (header[2]>>29) & (2**3-1)
     l2ch = (header[2]>>24) & (2**5-1)
     flen = (header[2])     & (2**24-1)
 
@@ -62,7 +62,7 @@ for i in range(int(sys.argv[1])):
     c1    =  (header[3]>>31) & (1)
     bps_1 =  (header[3]>>26) & (2**5-1)
     th_id =  (header[3]>>16) & (2**10-1)
-    st_id =  (header[3])     & (2**10-1)
+    st_id =  (header[3])     & (2**16-1)
 
     print "W3:   Real (or Complex)     : %d" %c1
     print "      Bits per samp, minus 1: %d" %bps_1
@@ -74,7 +74,7 @@ for i in range(int(sys.argv[1])):
     #   W4
     #########
     
-    edv        = (header[4]>>25) & (2**8-1)
+    edv        = (header[4]>>24) & (2**8-1)
     magic_wd   = (header[4]>>4)  & (2**25-1)
     bl_or_2ant = (header[4]>>3)  & (1)
     alma_quad  = (header[4]>>1)  & (3)
