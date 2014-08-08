@@ -129,18 +129,18 @@ while not end_of_file:
 pylab.figure()
 for name, auto in autos.iteritems():
     pylab.plot(10*log10(abs(auto)), label=name)
-xlim(0, args.NFFT/2)
+pylab.xlim(0, args.NFFT/2)
 pylab.legend()
 
 # plot the cross phase spectra
-pylab.figure()
 for baseline in cross:
+    pylab.figure()
     pylab.plot(angle(cross[baseline]), '.', label='{0} X {1}'.format(*baseline))
-xlim(0, args.NFFT/2)
-ylim(-pi, pi)
-pylab.legend()
+    pylab.xlim(0, args.NFFT/2)
+    pylab.ylim(-pi, pi)
+    pylab.legend()
 
-# plot the lags
+# plot the cross lags
 for baseline in cross:
     pylab.figure()
     norm = sqrt(real(irfft(autos[baseline[0]]).max() * irfft(autos[baseline[1]]).max()))
@@ -155,7 +155,7 @@ for baseline in cross:
     pylab.annotate('\nCorr. coef.:{0:.2f}\nSNR: {1:.2f} dB\nDelay: {2} samples'.format(peak, snr, delay), 
                    xy=(delay, peak), xytext=(0.8, 0.8), textcoords='axes fraction', backgroundcolor='white',
                    arrowprops=dict(facecolor='black', width=0.1, headwidth=4, shrink=0.1))
-    xlim(-args.NFFT/32, args.NFFT/32)
+    pylab.xlim(-args.NFFT/32, args.NFFT/32)
 
 # show all plots
 pylab.show()
