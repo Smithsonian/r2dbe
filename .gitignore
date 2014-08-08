@@ -1,0 +1,8 @@
+# VDIF data files
+*.vdif
+
+# Python bytecode
+*.pyc
+
+# EMACS back-ups
+*~
