@@ -14,7 +14,9 @@ from vdif import VDIFFrameHeader, VDIFFrame
 # parse the user's command line arguments
 parser = argparse.ArgumentParser(description='Simulate VDIF data from multiple stations')
 parser.add_argument('-v', dest='verbose', action='store_true', help='display debugging logs')
-parser.add_argument('-n', '--nfft', dest='NFFT', default=1024, type=int, help='size of FFT to use')
+parser.add_argument('--nfft', dest='NFFT', default=1024, type=int, help='size of FFT to use')
+parser.add_argument('-n', '--frames-to-check', dest='frames_to_check', default=-1, 
+                    type=int, help='number of frames (from the beginning) to check (default: all)')
 parser.add_argument('files', type=str, nargs='+', help='VDIF files with data to correlate')
 args = parser.parse_args()
 
@@ -85,13 +87,18 @@ logger.debug('frame offsets determined: {0}'.format(frame_offsets))
 for i, file_ in enumerate(files):
     file_.seek(frame_offsets[i] * pkt_size)
 
-# processing starts here
+# set some initial values
 autos = {}
 cross = {}
 elements = list(file_.name for file_ in files)
 baselines = list(combinations(elements, 2)) + list((e, e) for e in elements)
-end_of_file = False
-while not end_of_file:
+
+# keep track of frame counts
+frame_n = 0
+
+# go through every frame
+end_of_frames = False
+while not end_of_frames:
 
     # grab a single packet from each file
     spectra = dict((file_.name, None) for file_ in files)
@@ -103,7 +110,7 @@ while not end_of_file:
         # check if we reached eof
         if not len(pkt) == pkt_size:
             logger.debug('reach eof for {0}'.format(file_.name))
-            end_of_file = True
+            end_of_frames = True
             break
 
         # create frame object
@@ -113,7 +120,7 @@ while not end_of_file:
         spectra[file_.name] = rfft(split(frame.data, len(frame.data)/args.NFFT), axis=1)
 
     # integrate the cross spectra
-    if not end_of_file:
+    if not end_of_frames:
         for baseline in baselines:
             left = spectra[baseline[0]]
             right = spectra[baseline[1]]
@@ -124,6 +131,17 @@ while not end_of_file:
             else:
                 part_cross = cross.get(baseline, zeros_like(prod))
                 cross[baseline] = part_cross + prod
+
+    # increment frame count
+    frame_n += 1
+
+    # every so often tell user we're still alive
+    if frame_n % 2048 == 0:
+        logger.info('still alive! currently on frame {0}'.format(frame_n))
+
+    # exit if we've check all requested frames
+    if frame_n == args.frames_to_check:
+        end_of_frames = True
 
 # plot the auto spectra
 pylab.figure()
