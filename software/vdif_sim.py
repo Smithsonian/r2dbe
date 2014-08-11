@@ -1,4 +1,6 @@
 import logging, argparse
+from numpy import int32
+from numpy.random import normal
 
 from vdif import VDIFFrame
 
@@ -20,6 +22,6 @@ if __name__ == "__main__":
                 vdif_frame = VDIFFrame()
                 vdif_frame.bits_per_sample = 32
                 vdif_frame.frame_length = 1024
-                vdif_frame.data = [0,] * 1024 * 2
+                vdif_frame.data = (2048 * normal(size=1024*2)).astype(int32)
                 vdif_frame.data_frame = frame_n
                 file_.write(str(vdif_frame))
