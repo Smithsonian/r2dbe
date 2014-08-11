@@ -55,7 +55,7 @@ class VDIFFrameHeader(object):
 
         # word 3
         inst.complex = bool((words[3] >> 31) & 0x1)
-        inst.bits_per_sample = 1 + (words[3] >> 26) & 0x1f
+        inst.bits_per_sample = 1 + ((words[3] >> 26) & 0x1f)
         inst.thread_id = (words[3] >> 16) & 0x3ff
         inst.station_id = words[3] & 0xffff
 
