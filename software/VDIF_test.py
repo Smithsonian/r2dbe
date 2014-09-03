@@ -19,11 +19,7 @@ pol_block1  = 1
 
 roach2 = corr.katcp_wrapper.FpgaClient('roach2-08')
 roach2.wait_connected()
-#roach2.progdev('r2dbe_top_2014_Aug_13_1405.bof.gz')
-#roach2.progdev('r2dbe_top_2014_Aug_15_1649.bof.gz')
-#roach2.progdev('r2dbe_top_2014_Aug_14_1843.bof.gz')
-#roach2.progdev('r2dbe_top_2014_Aug_27_1228.bof.gz')
-roach2.progdev('r2dbe_top_2014_Aug_27_1442.bof.gz')
+roach2.progdev('r2dbe_rev2.bof.gz')
 
 roach2.wait_connected()
 
