@@ -6,7 +6,7 @@ import pylab
 from numpy.fft import fftshift, rfft, irfft
 from numpy import (
     pi, log10, angle, sqrt, real, conjugate, 
-    split, arange, zeros_like
+    split, arange, linspace, zeros_like
     )
 
 from vdif import VDIFFrameHeader, VDIFFrame
@@ -17,6 +17,8 @@ parser.add_argument('-v', dest='verbose', action='store_true', help='display deb
 parser.add_argument('--nfft', dest='NFFT', default=1024, type=int, help='size of FFT to use')
 parser.add_argument('-n', '--frames-to-check', dest='frames_to_check', default=-1, 
                     type=int, help='number of frames (from the beginning) to check (default: all)')
+parser.add_argument('-s', '--sample-rate', dest='sample_rate', default=4096.0, 
+                    type=float, help='rate at which the data was sampled in MHz (default: 4096.0)')
 parser.add_argument('files', type=str, nargs='+', help='VDIF files with data to correlate')
 args = parser.parse_args()
 
@@ -75,7 +77,7 @@ for hdr in first_hdrs:
         raise ValueError(err_msg)
 
 # determine the packet size
-pkt_size = (16 if legacy_mode else 32) + frame_length * 8
+pkt_size = frame_length * 8
 logger.debug('packet size: {0} bytes'.format(pkt_size))
 
 # determine frame offsets needed to correlate
@@ -143,22 +145,34 @@ while not end_of_frames:
     if frame_n == args.frames_to_check:
         end_of_frames = True
 
+# find our frequency range
+freqs = linspace(0.0, args.sample_rate/2, num=args.NFFT/2)
+
 # plot the auto spectra
 pylab.figure()
 for name, auto in autos.iteritems():
-    pylab.plot(10*log10(abs(auto)), label=name)
-pylab.xlim(0, args.NFFT/2)
+    pylab.step(freqs, 10*log10(abs(auto[1:])), label=name)
+    # pylab.plot(abs(auto[1:]), label=name)
+    # pylab.semilogy(freqs, abs(auto[1:]), label=name)
+pylab.title('Auto-correlation Amplitudes')
+pylab.ylabel('Amplitude (dB)')
+pylab.xlabel('Frequency (MHz)')
+pylab.xlim(0, args.sample_rate/2)
 pylab.legend()
 
 # plot the cross phase spectra
 for baseline in cross:
     pylab.figure()
-    pylab.plot(angle(cross[baseline]), '.', label='{0} X {1}'.format(*baseline))
-    pylab.xlim(0, args.NFFT/2)
+    pylab.plot(freqs, angle(cross[baseline])[1:], '.', label='{0} X {1}'.format(*baseline))
+    pylab.title('Cross-correlation Phase')
+    pylab.ylabel('Phase (rads)')
+    pylab.xlabel('Frequency (MHz)')
+    pylab.xlim(0, args.sample_rate/2)
     pylab.ylim(-pi, pi)
     pylab.legend()
 
 # plot the cross lags
+sample_period = 1e3 / args.sample_rate
 for baseline in cross:
     pylab.figure()
     norm = sqrt(real(irfft(autos[baseline[0]]).max() * irfft(autos[baseline[1]]).max()))
@@ -166,14 +180,17 @@ for baseline in cross:
     peak = corr_coeff.max().real
     noise = corr_coeff.sum().real / len(corr_coeff)
     snr = 10*log10(peak/noise)
-    lags = arange(-len(corr_coeff)/2, len(corr_coeff)/2)
-    delay = lags[corr_coeff.argmax()]
+    lags = linspace(-sample_period * args.NFFT/2, sample_period * args.NFFT/2, num=args.NFFT)
+    delay_lag = corr_coeff.argmax() - args.NFFT/2
+    delay_ns = lags[corr_coeff.argmax()]
     pylab.plot(lags, corr_coeff)
     pylab.title('{0} (x) {1}'.format(*baseline))
-    pylab.annotate('\nCorr. coef.:{0:.2f}\nSNR: {1:.2f} dB\nDelay: {2} samples'.format(peak, snr, delay), 
-                   xy=(delay, peak), xytext=(0.8, 0.8), textcoords='axes fraction', backgroundcolor='white',
+    pylab.annotate('\nCorr. coef.:{0:.2f}\nSNR: {1:.2f} dB\nDelay (lags): {2}\nDelay (ns): {3:.2f}'.format(peak, snr, delay_lag, delay_ns), 
+                   xy=(delay_ns, peak), xytext=(0.8, 0.8), textcoords='axes fraction', backgroundcolor='white',
                    arrowprops=dict(facecolor='black', width=0.1, headwidth=4, shrink=0.1))
-    pylab.xlim(-args.NFFT/32, args.NFFT/32)
+    pylab.ylabel('Correlation Coefficient')
+    pylab.xlabel('Delay (ns)')
+    pylab.xlim(-sample_period*args.NFFT/4, sample_period*args.NFFT/4)
 
 # show all plots
 pylab.show()

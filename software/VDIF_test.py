@@ -1,13 +1,15 @@
+import adc5g, corr
 from datetime import datetime, time
 
-is_test = 1
+is_test = 0
 
-station_id  = 65536
+station_id_0  = 0
+station_id_1  = 1
 
 # set thread id for both blocks
 # perhaps thread is always 0?
-thread_id_0 = 1024
-thread_id_1 = 1024
+thread_id_0 = 0
+thread_id_1 = 0
 
 # set pol for both blocks
 # dual pol
@@ -15,37 +17,54 @@ pol_block0  = 1
 pol_block1  = 1
 
 
-roach2.progdev('r2dbe_top_2014_Jul_29_1224.bof.gz')
+roach2 = corr.katcp_wrapper.FpgaClient('roach2-08')
+roach2.wait_connected()
+#roach2.progdev('r2dbe_top_2014_Aug_13_1405.bof.gz')
+#roach2.progdev('r2dbe_top_2014_Aug_15_1649.bof.gz')
+#roach2.progdev('r2dbe_top_2014_Aug_14_1843.bof.gz')
+#roach2.progdev('r2dbe_top_2014_Aug_27_1228.bof.gz')
+roach2.progdev('r2dbe_top_2014_Aug_27_1442.bof.gz')
 
 roach2.wait_connected()
 
+# arm the one pps
+roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
+roach2.write_int('r2dbe_onepps_ctrl', 0)
 
+# set data mux to ADC
+roach2.write_int('r2dbe_data_mux_0_sel', 1)
+roach2.write_int('r2dbe_data_mux_1_sel', 1)
+
+# calibrate ADCs
+adc5g.set_test_mode(roach2, 0)
+adc5g.set_test_mode(roach2, 1)
+adc5g.sync_adc(roach2)
+opt, glitches = adc5g.calibrate_mmcm_phase(roach2, 0, ['r2dbe_snap_8bit_0_data',])
+print opt, glitches
+opt, glitches = adc5g.calibrate_mmcm_phase(roach2, 1, ['r2dbe_snap_8bit_1_data',])
+print opt, glitches
+adc5g.unset_test_mode(roach2, 0)
+adc5g.unset_test_mode(roach2, 1)
 
 # set 10 gbe vals
-# set for card 0 port 0 sfp+
-name = 'tengbe_0'
-fid  = 5
 
 arp = [0xffffffffffff] * 256
-arp[30] = 0x000f530cd110 # mac address of tenzing p6p1
+arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
+arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
 
-src_ip = (192<<24) + (168<<16) + (10<<8) + 20
-src_mac = (2<<40) + (2<<32) + 20 + src_ip
-# tenzing
-#dest_ip= (192<<24) + (168<<16) + (10<<8) + 30
-# mark6 eth3
-dest_ip= (192<<24) + (168<<16) + (1<<8) + 3
+for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 
-roach2.config_10gbe_core('r2dbe_'+name+'_core', src_mac, src_ip, 4000, arp)
+    src_ip  = (192<<24) + (168<<16) + (1<<8) + i*10
+    src_mac = (2<<40) + (2<<32) + 20 + src_ip
+    dest_ip = (192<<24) + (168<<16) + (1<<8) + i
 
-roach2.write_int('r2dbe_'+name+'_dest_ip', dest_ip)
-roach2.write_int('r2dbe_'+name+'_dest_port', 4001)
+    roach2.config_10gbe_core('r2dbe_' + name + '_core', src_mac, src_ip, 4000, arp)
+    roach2.write_int('r2dbe_' + name + '_dest_ip', dest_ip)
+    roach2.write_int('r2dbe_' + name + '_dest_port', 4001)
 
-# reset tengbe (this is VITAL)
-roach2.write_int('r2dbe_'+name+'_rst',1)
-roach2.write_int('r2dbe_'+name+'_rst',0)
-
-
+    # reset tengbe (this is VITAL)
+    roach2.write_int('r2dbe_' + name + '_rst', 1)
+    roach2.write_int('r2dbe_' + name + '_rst', 0)
 
 
 #######################################
@@ -92,56 +111,24 @@ roach2.write_int('r2dbe_vdif_1_hdr_w1_ref_ep',ref_ep_num)
 ############
 #   W3 
 ############
-roach2.write_int('r2dbe_vdif_0_hdr_w3_thread_id',  thread_id_0)
-roach2.write_int('r2dbe_vdif_1_hdr_w3_thread_id',  thread_id_1)
+roach2.write_int('r2dbe_vdif_0_hdr_w3_thread_id', thread_id_0)
+roach2.write_int('r2dbe_vdif_1_hdr_w3_thread_id', thread_id_1)
 
-roach2.write_int('r2dbe_vdif_0_hdr_w3_station_id', station_id)
-roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', station_id)
+roach2.write_int('r2dbe_vdif_0_hdr_w3_station_id', station_id_0)
+roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', station_id_1)
 
 
 ############
 #   W4
 ############
-# begin extra header, match ALMA 
-roach2.write_int('r2dbe_vdif_0_hdr_w4_magic_word', 678629)
-roach2.write_int('r2dbe_vdif_1_hdr_w4_magic_word', 678629)
 
-if is_test:
-    bl_or_2ant0 = 1
-    bl_or_2ant1 = 1
-    alma0       = 3
-    alma1       = 3
-else:
-    bl_or_2ant0 = 0
-    bl_or_2ant1 = 0
-    alma0       = 0
-    alma1       = 0
-
-roach2.write_int('r2dbe_vdif_0_hdr_w4_bl_or_2ant', bl_or_2ant0)
-roach2.write_int('r2dbe_vdif_1_hdr_w4_bl_or_2ant', bl_or_2ant1)
-
-roach2.write_int('r2dbe_vdif_0_hdr_w4_alma_bl_quad', alma0)
-roach2.write_int('r2dbe_vdif_1_hdr_w4_alma_bl_quad', alma1)
-
-roach2.write_int('r2dbe_vdif_0_hdr_w4_pol0_or_pol1',pol_block0)
-roach2.write_int('r2dbe_vdif_1_hdr_w4_pol0_or_pol1',pol_block1)
-
+# nothing to do
 
 ############
 #   W5
 ############
-pic_status0 = 54321
-pic_status1 = 54321
 
-roach2.write_int('r2dbe_vdif_0_hdr_w5_pic_status',pic_status0)
-roach2.write_int('r2dbe_vdif_1_hdr_w5_pic_status',pic_status1)
-
-mark60 = 12765
-mark61 = 12765
-
-roach2.write_int('r2dbe_vdif_0_hdr_w5_mark6',mark60)
-roach2.write_int('r2dbe_vdif_1_hdr_w5_mark6',mark61)
-
+# nothing to do
 
 ############
 #   W6
@@ -156,11 +143,23 @@ roach2.write_int('r2dbe_vdif_1_hdr_w5_mark6',mark61)
 # nothing to do
 
 
-
-
 # select test data 
-roach2.write_int('r2dbe_'+'vdif_0_test_sel',is_test)
-roach2.write_int('r2dbe_'+'vdif_1_test_sel',is_test)
+roach2.write_int('r2dbe_vdif_0_test_sel', is_test)
+roach2.write_int('r2dbe_vdif_1_test_sel', is_test)
 
 # enable data transmission
-roach2.write_int('r2dbe_'+'vdif_0_enable',1)
+roach2.write_int('r2dbe_vdif_0_enable', 1)
+roach2.write_int('r2dbe_vdif_1_enable', 1)
+
+# use little endian word order
+roach2.write_int('r2dbe_vdif_0_little_end', 1)
+roach2.write_int('r2dbe_vdif_1_little_end', 1)
+
+# reverse time order (per vdif spec)
+roach2.write_int('r2dbe_vdif_0_reorder_2b_samps', 1)
+roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
+
+# set to test-vector noise mode
+roach2.write_int('r2dbe_quantize_0_thresh', 16)
+roach2.write_int('r2dbe_quantize_1_thresh', 16)
+
