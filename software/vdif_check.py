@@ -76,7 +76,7 @@ with open(args.filename, 'rb') as file_:
     logger.debug('first header: {0}'.format(repr(first_hdr)))
 
     # determine the packet size
-    pkt_size = (16 if first_hdr.legacy_mode else 32) + first_hdr.frame_length * 8
+    pkt_size = first_hdr.frame_length * 8
     logger.info('packet size: {0} bytes'.format(pkt_size))
     
     # is pkt_size possbily too big?

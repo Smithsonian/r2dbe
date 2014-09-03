@@ -132,23 +132,25 @@ class VDIFFrame(VDIFFrameHeader):
         # create our instance
         inst = super(VDIFFrame, cls).from_bin(bin_frame)
 
-        # create empty data buffer 
-        samp_per_word = 32 / inst.bits_per_sample
-        inst.data = zeros(samp_per_word * inst.frame_length * 2, int32)
-
         # find where the data starts and ends in binary frame
         data_start = 16 if inst.legacy_mode else 32
-        data_end = data_start + inst.frame_length * 8
+        data_stop = inst.frame_length * 8
+        data_size = data_stop - data_start
+        data_words = data_size / 4
+
+        # create empty data buffer
+        samp_per_word = 32 / inst.bits_per_sample
+        inst.data = zeros(samp_per_word * data_words, int32)
 
         # unpack data into array
-        words = array(unpack('<{0}I'.format(inst.frame_length * 2), bin_frame[data_start:data_end]), uint32)
+        words = array(unpack('<{0}I'.format(data_words), bin_frame[data_start:data_stop]), uint32)
 
         # interpret the data given our bits-per-sample
         samp_max = 2**inst.bits_per_sample - 1
         for samp_n in range(samp_per_word):
 
             # get sample data from words
-            shift_by = 32 - ((samp_n + 1) * inst.bits_per_sample)
+            shift_by = inst.bits_per_sample * samp_n
             inst.data[samp_n::samp_per_word] = (words >> shift_by) & samp_max
 
         # we need to reinterpret as offset binary
@@ -158,20 +160,29 @@ class VDIFFrame(VDIFFrameHeader):
 
     def to_bin(self):
 
+        # get the header string first
         out_str = VDIFFrameHeader.to_bin(self)
 
+        # find where the data starts and ends in binary frame
+        data_start = 16 if self.legacy_mode else 32
+        data_stop = self.frame_length * 8
+        data_size = data_stop - data_start
+        data_words = data_size / 4
+
+        # reinterpet data given our bits-per-sample
+        samp_max = 2**self.bits_per_sample - 1
         samp_per_word = 32 / self.bits_per_sample
-        for word_n in range(self.frame_length * 2):
+        for word_n in range(data_words):
             word = 0
 
             for samp_n in range(samp_per_word):
-                samp = self.data[word_n * samp_per_word + samp_n]
+                samp = int(self.data[word_n * samp_per_word + samp_n])
 
-                # reinterpret sample as unsigned
-                samp = samp + 2**(self.bits_per_sample-1)
+                # reinterpret sample as offset-binary
+                samp = (samp + 2**(self.bits_per_sample-1)) & samp_max
 
                 # add the sample data to the word
-                shift_by = 32 - ((samp_n + 1) * self.bits_per_sample)
+                shift_by = self.bits_per_sample * samp_n
                 word = word + (samp << shift_by)
 
             out_str += pack('<I', word)
