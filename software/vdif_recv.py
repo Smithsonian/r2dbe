@@ -18,9 +18,9 @@ frames_to_capture = int(sys.argv[1])
 
 sock = []
 sock.append(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
-sock[-1].bind(("192.168.1.3", 4001))
+sock[-1].bind(("172.16.3.16", 4001))
 sock.append(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
-sock[-1].bind(("192.168.1.5", 4001))
+sock[-1].bind(("172.16.5.16", 4001))
 
 data_str = []
 data_str.append("")
@@ -29,9 +29,9 @@ data_str.append("")
 pkt = [None,] * CHANNELS
 for i in range(frames_to_capture):
     for chan in range(CHANNELS):
-        pkt[chan], addr = sock[chan].recvfrom(FRAME_SIZE)
+        pkt[chan], addr = sock[chan].recvfrom(8 + FRAME_SIZE)
     for chan in range(CHANNELS):
-        data_str[chan] += pkt[chan]
+        data_str[chan] += pkt[chan][8:]
 
 for s in sock:
     s.close()

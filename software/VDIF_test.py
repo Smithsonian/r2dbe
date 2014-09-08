@@ -1,5 +1,8 @@
 import adc5g, corr
-from datetime import datetime, time
+from time import sleep
+from datetime import datetime, time, timedelta
+
+dstart = datetime(2014, 9, 8, 21, 5, 0, 0)
 
 is_test = 0
 
@@ -17,9 +20,9 @@ pol_block0  = 1
 pol_block1  = 1
 
 
-roach2 = corr.katcp_wrapper.FpgaClient('roach2-08')
+roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
 roach2.wait_connected()
-roach2.progdev('r2dbe_rev2.bof.gz')
+roach2.progdev('r2dbe_rev2.bof')
 
 roach2.wait_connected()
 
@@ -48,11 +51,15 @@ arp = [0xffffffffffff] * 256
 arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
 arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
 
+ip_b3 = 172
+ip_b2 = 16
+ip_b0 = 16
+
 for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 
-    src_ip  = (192<<24) + (168<<16) + (1<<8) + i*10
+    src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((i*10)<<8) + ip_b0
     src_mac = (2<<40) + (2<<32) + 20 + src_ip
-    dest_ip = (192<<24) + (168<<16) + (1<<8) + i
+    dest_ip = (ip_b3<<24) + (ip_b2<<16) + (i<<8) + ip_b0
 
     roach2.config_10gbe_core('r2dbe_' + name + '_core', src_mac, src_ip, 4000, arp)
     roach2.write_int('r2dbe_' + name + '_dest_ip', dest_ip)
@@ -77,7 +84,7 @@ utcnow = datetime.utcnow()
 
 
 delta       = utcnow-ref_ep_date
-sec_ref_ep  = delta.total_seconds()
+sec_ref_ep  = delta.seconds
 
 # to check
 nday = sec_ref_ep/24/3600
@@ -143,10 +150,6 @@ roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', station_id_1)
 roach2.write_int('r2dbe_vdif_0_test_sel', is_test)
 roach2.write_int('r2dbe_vdif_1_test_sel', is_test)
 
-# enable data transmission
-roach2.write_int('r2dbe_vdif_0_enable', 1)
-roach2.write_int('r2dbe_vdif_1_enable', 1)
-
 # use little endian word order
 roach2.write_int('r2dbe_vdif_0_little_end', 1)
 roach2.write_int('r2dbe_vdif_1_little_end', 1)
@@ -158,4 +161,13 @@ roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
 # set to test-vector noise mode
 roach2.write_int('r2dbe_quantize_0_thresh', 16)
 roach2.write_int('r2dbe_quantize_1_thresh', 16)
+
+# enable data transmission
+while(datetime.utcnow() < dstart):
+    sleep(.1)
+
+roach2.write_int('r2dbe_vdif_0_enable', 1)
+roach2.write_int('r2dbe_vdif_1_enable', 1)
+
+
 
