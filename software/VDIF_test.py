@@ -26,10 +26,6 @@ roach2.progdev('r2dbe_rev2.bof')
 
 roach2.wait_connected()
 
-# arm the one pps
-roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
-roach2.write_int('r2dbe_onepps_ctrl', 0)
-
 # set data mux to ADC
 roach2.write_int('r2dbe_data_mux_0_sel', 1)
 roach2.write_int('r2dbe_data_mux_1_sel', 1)
@@ -44,6 +40,10 @@ opt, glitches = adc5g.calibrate_mmcm_phase(roach2, 1, ['r2dbe_snap_8bit_1_data',
 print opt, glitches
 adc5g.unset_test_mode(roach2, 0)
 adc5g.unset_test_mode(roach2, 1)
+
+# arm the one pps
+roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
+roach2.write_int('r2dbe_onepps_ctrl', 0)
 
 # set 10 gbe vals
 
