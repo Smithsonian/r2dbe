@@ -1,0 +1,56 @@
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto eth0
+iface eth0 inet static
+        address 131.142.8.210
+	netmask 255.255.248.0
+	network 131.142.8.0
+	broadcast 131.142.8.255
+	gateway 131.142.8.1
+	# dns-* options are implemented by the resolvconf package, if installed
+	dns-nameserver 131.142.21.50
+	dns-search cfa.harvard.edu
+
+# A secondary network interface
+auto eth1
+iface eth1 inet static
+       address 192.168.1.1
+       netmask 255.255.255.0
+
+allow-hotplug eth2
+iface eth2 inet static
+        address 172.16.2.16
+        netmask 255.255.255.0
+        network 172.16.2.0
+        broadcast 172.16.2.255
+
+allow-hotplug eth3
+iface eth3 inet static
+        address 172.16.3.16
+        netmask 255.255.255.0
+        network 172.16.3.0
+        broadcast 172.16.3.255
+
+allow-hotplug eth4
+iface eth4 inet static
+        address 172.16.4.16
+        netmask 255.255.255.0
+        network 172.16.4.0
+        broadcast 172.16.4.255
+
+allow-hotplug eth5
+iface eth5 inet static
+        address 172.16.5.16
+        netmask 255.255.255.0
+        network 172.16.5.0
+        broadcast 172.16.5.255
+
+# eof
+
+
