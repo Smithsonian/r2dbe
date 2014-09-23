@@ -172,6 +172,9 @@ for baseline in cross:
     pylab.legend()
 
 # plot the cross lags
+delref = elements[0]
+delays = dict.fromkeys(elements)
+delays[delref] = 0
 sample_period = 1e3 / args.sample_rate
 for baseline in cross:
     pylab.figure()
@@ -182,6 +185,10 @@ for baseline in cross:
     snr = 10*log10(peak/noise)
     lags = linspace(-sample_period * args.NFFT/2, sample_period * args.NFFT/2, num=args.NFFT)
     delay_lag = corr_coeff.argmax() - args.NFFT/2
+    if baseline[0] == delref:
+        delays[baseline[1]] = delay_lag
+    elif baseline[1] == delref:
+        delays[baseline[0]] = -delay_lag
     delay_ns = lags[corr_coeff.argmax()]
     pylab.plot(lags, corr_coeff)
     pylab.title('{0} (x) {1}'.format(*baseline))
@@ -191,6 +198,11 @@ for baseline in cross:
     pylab.ylabel('Correlation Coefficient')
     pylab.xlabel('Delay (ns)')
     pylab.xlim(-sample_period*args.NFFT/4, sample_period*args.NFFT/4)
+
+# print out our measured delays
+for element in elements:
+    min_del = min(delays.values())
+    logger.info('{0} delay is {1} samples'.format(element, delays[element] + min_del))
 
 # show all plots
 pylab.show()
