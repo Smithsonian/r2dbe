@@ -202,7 +202,7 @@ for baseline in cross:
 # print out our measured delays
 for element in elements:
     min_del = min(delays.values())
-    logger.info('{0} delay is {1} samples'.format(element, delays[element] + min_del))
+    logger.info('{0} delay is {1} samples'.format(element, delays[element] + abs(min_del)))
 
 # show all plots
 pylab.show()
