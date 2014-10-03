@@ -2,8 +2,6 @@ import adc5g, corr
 from time import sleep
 from datetime import datetime, time, timedelta
 
-dstart = datetime(2014, 9, 8, 21, 5, 0, 0)
-
 is_test = 0
 
 station_id_0  = 0
@@ -41,10 +39,6 @@ print opt, glitches
 adc5g.unset_test_mode(roach2, 0)
 adc5g.unset_test_mode(roach2, 1)
 
-# arm the one pps
-roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
-roach2.write_int('r2dbe_onepps_ctrl', 0)
-
 # set 10 gbe vals
 
 arp = [0xffffffffffff] * 256
@@ -53,7 +47,7 @@ arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
 
 ip_b3 = 172
 ip_b2 = 16
-ip_b0 = 16
+ip_b0 = 15 #should be last 2 digits of name: Mark6-40**
 
 for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 
@@ -84,7 +78,7 @@ utcnow = datetime.utcnow()
 
 
 delta       = utcnow-ref_ep_date
-sec_ref_ep  = delta.seconds
+sec_ref_ep  = delta.seconds + 24*3600*delta.days
 
 # to check
 nday = sec_ref_ep/24/3600
@@ -93,6 +87,10 @@ nday = sec_ref_ep/24/3600
 #print delta.total_seconds()
 #print 'secs since ref ep: %d' %sec_ref_ep
 #print 'days since ref ep: %d' %nday
+roach2.write_int('r2dbe_vdif_0_hdr_w0_reset',1)
+roach2.write_int('r2dbe_vdif_0_hdr_w0_reset',0)
+roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',1)
+roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',0)
 roach2.write_int('r2dbe_vdif_0_hdr_w0_sec_ref_ep',sec_ref_ep)
 roach2.write_int('r2dbe_vdif_1_hdr_w0_sec_ref_ep',sec_ref_ep)
 
@@ -162,10 +160,13 @@ roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
 roach2.write_int('r2dbe_quantize_0_thresh', 16)
 roach2.write_int('r2dbe_quantize_1_thresh', 16)
 
-# enable data transmission
-while(datetime.utcnow() < dstart):
-    sleep(.1)
+# arm the one pps
+roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
+roach2.write_int('r2dbe_onepps_ctrl', 0)
 
+
+# must wait to set the enable signal until pps signal is stable
+sleep(2)
 roach2.write_int('r2dbe_vdif_0_enable', 1)
 roach2.write_int('r2dbe_vdif_1_enable', 1)
 
