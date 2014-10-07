@@ -1,3 +1,4 @@
+import sys
 import logging
 import argparse
 from datetime import datetime
@@ -16,6 +17,7 @@ from vdif import VDIFFrameHeader, VDIFFrame
 # parse the user's command line arguments
 parser = argparse.ArgumentParser(description='check a VDIF file for header/data quality')
 parser.add_argument('-v', dest='verbose', action='store_true', help='display debugging logs')
+parser.add_argument('-t', '--time', dest='tc_only', action='store_true', help='do the time-check only')
 parser.add_argument('-s', '--skip-bytes', metavar="SKIP_BYTES", dest='skip_bytes', type=int, default=0,
                     help='if given the script will ignore the first SKIP_BYTES of file')
 parser.add_argument('-n', '--frames-to-check', dest='frames_to_check', default=-1, 
@@ -82,6 +84,19 @@ with open(args.filename, 'rb') as file_:
     # is pkt_size possbily too big?
     if pkt_size > 8224:
         logger.warning('packet size possibly too big. check start byte offset')
+
+    # get the last VDIF header
+    file_.seek(-pkt_size, 2)
+    last_hdr = VDIFFrameHeader.from_bin(file_.read(32))
+    logger.debug('last header: {0}'.format(repr(last_hdr)))
+
+    # print out time-check info
+    logger.info('start time: {0:%x %Z %X.%f}'.format(first_hdr.datetime()))
+    logger.info('stop time:  {0:%x %Z %X.%f}'.format(last_hdr.datetime()))
+
+    # exit if user wants only time check
+    if args.tc_only:
+        sys.exit()
 
     # must remember to seek back to start
     file_.seek(args.skip_bytes)
