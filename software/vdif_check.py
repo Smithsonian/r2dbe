@@ -140,7 +140,7 @@ with open(args.filename, 'rb') as file_:
 
         # every so often tell user we're still alive
         if frame_n % 2048 == 0:
-            logger.info('still alive! currently on frame {0}'.format(frame_n))
+            logger.debug('still alive! currently on frame {0}'.format(frame_n))
 
         # exit if we've check all requested frames
         if frame_n == args.frames_to_check:
