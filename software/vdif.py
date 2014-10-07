@@ -134,7 +134,7 @@ class VDIFFrameHeader(object):
     def __str__(self):
         return self.to_bin()
 
-    def datetime(self):
+    def datetime(self, end=False):
 
         # find out how many words per frame
         header_size = 2 if self.legacy_mode else 4
@@ -154,10 +154,13 @@ class VDIFFrameHeader(object):
                         day = 1, tzinfo=UTC())
 
         # get the seconds from the start of the day
-        secs = timedelta(seconds = self.secs_since_epoch,
-                         microseconds = usecs_per_frame * self.data_frame)
+        secs = timedelta(seconds = self.secs_since_epoch)
 
-        return date + secs
+        # get the microseconds from the second
+        off = usecs_per_frame if end else 0.0
+        usecs = timedelta(microseconds = usecs_per_frame * self.data_frame + off)
+
+        return date + secs + usecs
 
 
 class VDIFFrame(VDIFFrameHeader):
