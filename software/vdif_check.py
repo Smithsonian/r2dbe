@@ -90,9 +90,15 @@ with open(args.filename, 'rb') as file_:
     last_hdr = VDIFFrameHeader.from_bin(file_.read(32))
     logger.debug('last header: {0}'.format(repr(last_hdr)))
 
+    # get start, stop, and total time
+    start = first_hdr.datetime()
+    stop  = last_hdr.datetime(end=True)
+    total = stop - start
+
     # print out time-check info
-    logger.info('start time: {0:%d %b %Y %Z %X.%f}'.format(first_hdr.datetime()))
-    logger.info('stop time:  {0:%d %b %Y %Z %X.%f}'.format(last_hdr.datetime(end=True)))
+    logger.info('start time: {0:%d %b %Y %Z %X.%f}'.format(start))
+    logger.info('stop  time: {0:%d %b %Y %Z %X.%f}'.format(stop))
+    logger.info('total time: {0:f} secs'.format(total.seconds + total.microseconds * 1e-6))
 
     # exit if user wants only time check
     if args.tc_only:
