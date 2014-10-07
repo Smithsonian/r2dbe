@@ -1,10 +1,25 @@
 from struct import pack, unpack
+from datetime import datetime, timedelta, tzinfo
 from numpy import int32, uint32, array, zeros
+
+
+class UTC(tzinfo):
+    """ UTC tzinfo """
+
+    def utcoffset(self, dt):
+        return timedelta(0)
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return timedelta(0)
 
 
 class VDIFFrameHeader(object):
 
-    def __init__(self):
+    def __init__(self, sample_rate=4096e6):
+        self.sample_rate = sample_rate
 
         # word 0
         self.invalid_data = False
@@ -118,6 +133,27 @@ class VDIFFrameHeader(object):
 
     def __str__(self):
         return self.to_bin()
+
+    def datetime(self):
+
+        # find out how many words per frame
+        header_size = 2 if self.legacy_mode else 4
+        data_words = 2 * (self.frame_length - header_size)
+
+        # now how many time samples per frame
+        samp_per_word = 32 / self.bits_per_sample
+        tsamp_per_word = samp_per_word / (int(self.complex) + 1)
+        tsamp_per_frame = tsamp_per_word * data_words
+
+        # now how many usecs per frame
+        usecs_per_frame = 1e6 * (tsamp_per_frame / self.sample_rate)
+
+        date = datetime(year = 2000 + self.ref_epoch/2,
+                        month = (self.ref_epoch & 1) * 6,
+                        day = 1, tzinfo=UTC())
+        secs = timedelta(seconds = self.secs_since_epoch,
+                         microseconds = usecs_per_frame * self.data_frame)
+        return date + secs
 
 
 class VDIFFrame(VDIFFrameHeader):
