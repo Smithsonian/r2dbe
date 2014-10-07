@@ -91,8 +91,8 @@ with open(args.filename, 'rb') as file_:
     logger.debug('last header: {0}'.format(repr(last_hdr)))
 
     # print out time-check info
-    logger.info('start time: {0:%x %Z %X.%f}'.format(first_hdr.datetime()))
-    logger.info('stop time:  {0:%x %Z %X.%f}'.format(last_hdr.datetime()))
+    logger.info('start time: {0:%d %b %Y %Z %X.%f}'.format(first_hdr.datetime()))
+    logger.info('stop time:  {0:%d %b %Y %Z %X.%f}'.format(last_hdr.datetime()))
 
     # exit if user wants only time check
     if args.tc_only:
