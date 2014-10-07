@@ -79,8 +79,8 @@ with open(args.filename, 'rb') as file_:
 
     # determine the packet size
     pkt_size = first_hdr.frame_length * 8
-    logger.info('packet size: {0} bytes'.format(pkt_size))
-    
+    logger.debug('packet size: {0} bytes'.format(pkt_size))
+
     # is pkt_size possbily too big?
     if pkt_size > 8224:
         logger.warning('packet size possibly too big. check start byte offset')
