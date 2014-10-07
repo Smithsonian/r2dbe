@@ -148,11 +148,15 @@ class VDIFFrameHeader(object):
         # now how many usecs per frame
         usecs_per_frame = 1e6 * (tsamp_per_frame / self.sample_rate)
 
+        # get the date
         date = datetime(year = 2000 + self.ref_epoch/2,
-                        month = (self.ref_epoch & 1) * 6,
+                        month = 1 + (self.ref_epoch & 1) * 6,
                         day = 1, tzinfo=UTC())
+
+        # get the seconds from the start of the day
         secs = timedelta(seconds = self.secs_since_epoch,
                          microseconds = usecs_per_frame * self.data_frame)
+
         return date + secs
 
 
