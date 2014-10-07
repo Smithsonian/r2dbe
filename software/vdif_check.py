@@ -96,6 +96,7 @@ with open(args.filename, 'rb') as file_:
     total = stop - start
 
     # print out time-check info
+    logger.info('\nprint time-check information...')
     logger.info('start time: {0:%d %b %Y %Z %X.%f}'.format(start))
     logger.info('stop  time: {0:%d %b %Y %Z %X.%f}'.format(stop))
     logger.info('total time: {0:f} secs'.format(total.seconds + total.microseconds * 1e-6))
@@ -146,7 +147,7 @@ with open(args.filename, 'rb') as file_:
             end_of_frames = True
 
     # tell user we finished
-    logger.info('finished checking {0} frames. printing summary...'.format(frame_n))
+    logger.info('\nfinished checking {0} frames. printing summary...'.format(frame_n))
 
     # show results from error-type checks
     logger.info('\nprinting error-type check results...')
