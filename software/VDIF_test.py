@@ -39,6 +39,11 @@ print opt, glitches
 adc5g.unset_test_mode(roach2, 0)
 adc5g.unset_test_mode(roach2, 1)
 
+# arm the one pps
+roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
+roach2.write_int('r2dbe_onepps_ctrl', 0)
+sleep(2)
+
 # set 10 gbe vals
 
 arp = [0xffffffffffff] * 256
@@ -159,10 +164,6 @@ roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
 # set to test-vector noise mode
 roach2.write_int('r2dbe_quantize_0_thresh', 16)
 roach2.write_int('r2dbe_quantize_1_thresh', 16)
-
-# arm the one pps
-roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
-roach2.write_int('r2dbe_onepps_ctrl', 0)
 
 
 # must wait to set the enable signal until pps signal is stable
