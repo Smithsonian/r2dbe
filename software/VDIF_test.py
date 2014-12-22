@@ -162,9 +162,7 @@ roach2.write_int('r2dbe_vdif_0_reorder_2b_samps', 1)
 roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
 
 # set to test-vector noise mode
-roach2.write_int('r2dbe_quantize_0_thresh', 16)
-roach2.write_int('r2dbe_quantize_1_thresh', 16)
-
+execfile('alc.py')
 
 # must wait to set the enable signal until pps signal is stable
 sleep(2)
