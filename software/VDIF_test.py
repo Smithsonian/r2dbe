@@ -1,6 +1,7 @@
 import adc5g, corr
 from time import sleep
 from datetime import datetime, time, timedelta
+import netifaces as ni
 
 is_test = 0
 
@@ -39,15 +40,39 @@ print opt, glitches
 adc5g.unset_test_mode(roach2, 0)
 adc5g.unset_test_mode(roach2, 1)
 
+# arm the one pps
+roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
+roach2.write_int('r2dbe_onepps_ctrl', 0)
+sleep(2)
+
 # set 10 gbe vals
 
 arp = [0xffffffffffff] * 256
-arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
-arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
+mac_eth3 = ni.ifaddresses('eth3')[17][0]['addr']
+mac_hex3  = int(mac_eth3.translate(None,':'),16)
+mac_eth5 = ni.ifaddresses('eth5')[17][0]['addr']
+mac_hex5  = int(mac_eth5.translate(None,':'),16)
 
-ip_b3 = 172
-ip_b2 = 16
-ip_b0 = 15 #should be last 2 digits of name: Mark6-40**
+
+arp[3] = mac_hex3
+arp[5] = mac_hex5
+
+# can be entered manually
+#arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
+#arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
+
+ip = ni.ifaddresses('eth3')[2][0]['addr']
+ipb = [x for x in map(str.strip, ip.split('.'))]
+
+ip_b3 = int(ipb[0])
+ip_b2 = int(ipb[1])
+ip_b0 = int(ipb[3])
+
+
+# can be entered manually
+#ip_b3 = 172
+#ip_b2 = 16
+#ip_b0 = 15 #should be last 2 digits of name: Mark6-40**
 
 for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 
@@ -157,13 +182,7 @@ roach2.write_int('r2dbe_vdif_0_reorder_2b_samps', 1)
 roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
 
 # set to test-vector noise mode
-roach2.write_int('r2dbe_quantize_0_thresh', 16)
-roach2.write_int('r2dbe_quantize_1_thresh', 16)
-
-# arm the one pps
-roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
-roach2.write_int('r2dbe_onepps_ctrl', 0)
-
+execfile('alc.py')
 
 # must wait to set the enable signal until pps signal is stable
 sleep(2)
