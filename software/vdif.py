@@ -39,7 +39,7 @@ class VDIFFrameHeader(object):
         self.complex = False
         self.bits_per_sample = 0
         self.thread_id = 0
-        self.station_id = 0
+        self.station_id = ''
 
         # words 4-7
         self.eud_vers = 0
@@ -74,7 +74,7 @@ class VDIFFrameHeader(object):
         inst.complex = bool((words[3] >> 31) & 0x1)
         inst.bits_per_sample = 1 + ((words[3] >> 26) & 0x1f)
         inst.thread_id = (words[3] >> 16) & 0x3ff
-        inst.station_id = words[3] & 0xffff
+        inst.station_id = ''.join([chr((words[3]>>8) & 0xff), chr(words[3] & 0xff)])
 
         if not inst.legacy_mode:
 

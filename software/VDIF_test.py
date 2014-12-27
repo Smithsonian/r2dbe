@@ -5,18 +5,20 @@ import netifaces as ni
 
 is_test = 0
 
-station_id_0  = 0
-station_id_1  = 1
+station_id_0  = 'lh'  # dummy, chose lh for laura, high band (7-9 GHz)
+station_id_1  = 'll'  # dummy, chose ll for laura, low band (5-7 GHz)
+
+# set pol for both blocks
+# dual pol
+# 0 is X or L
+# 1 is Y or R
+pol_block0  = 1
+pol_block1  = 0
 
 # set thread id for both blocks
 # perhaps thread is always 0?
 thread_id_0 = 0
 thread_id_1 = 0
-
-# set pol for both blocks
-# dual pol
-pol_block0  = 1
-pol_block1  = 1
 
 
 roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
@@ -140,33 +142,44 @@ roach2.write_int('r2dbe_vdif_1_hdr_w1_ref_ep',ref_ep_num)
 roach2.write_int('r2dbe_vdif_0_hdr_w3_thread_id', thread_id_0)
 roach2.write_int('r2dbe_vdif_1_hdr_w3_thread_id', thread_id_1)
 
-roach2.write_int('r2dbe_vdif_0_hdr_w3_station_id', station_id_0)
-roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', station_id_1)
+# convert chars to 16 bit int
+st0 = ord(station_id_0[0])*2**8 + ord(station_id_0[1])
+st1 = ord(station_id_1[0])*2**8 + ord(station_id_1[1])
+
+roach2.write_int('r2dbe_vdif_0_hdr_w3_station_id', st0)
+roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', st1)
 
 
 ############
 #   W4
 ############
 
-# nothing to do
+eud_vers = 0x02
+
+w4_0 = eud_vers<<24 + pol_block0
+w4_1 = eud_vers<<24 + pol_block1
+
+roach2.write_int('r2dbe_vdif_0_hdr_w4',w4_0)
+roach2.write_int('r2dbe_vdif_1_hdr_w4',w4_1)
 
 ############
 #   W5
 ############
 
-# nothing to do
+# the offset in FPGA clocks between the R2DBE internal pps
+# and the incoming GPS pps
 
 ############
 #   W6
 ############
 
-# nothing to do
+#  PSN low word, written by FPGA to VDIF header
 
-############
+###########
 #   W7
 ############
 
-# nothing to do
+# PSN high word, written by FPGA to VDIF header
 
 
 # select test data 
