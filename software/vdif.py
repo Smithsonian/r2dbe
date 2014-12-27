@@ -45,7 +45,8 @@ class VDIFFrameHeader(object):
         self.eud_vers = 0
         self.eud = [0, 0, 0, 0]
         self.psn = 0
-        self.offset_samp = 0;
+        self.offset_samp = 0
+        self.pol = 0
 
     @classmethod
     def from_bin(cls, bin_hdr):
@@ -86,6 +87,7 @@ class VDIFFrameHeader(object):
             # words 4-7
             inst.eud_vers = (words[4] >> 24) & 0xff
             inst.eud[0] = words[4] & 0xffffff
+            inst.pol    = words[4] & 0x1
             inst.eud[1:4] = words[5:8]
             inst.psn = words[6]+2**32*words[7]
             inst.offset_samp = words[5];

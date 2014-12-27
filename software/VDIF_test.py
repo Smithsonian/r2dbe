@@ -156,8 +156,8 @@ roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', st1)
 
 eud_vers = 0x02
 
-w4_0 = eud_vers<<24 + pol_block0
-w4_1 = eud_vers<<24 + pol_block1
+w4_0 = eud_vers*2**24 + pol_block0
+w4_1 = eud_vers*2**24 + pol_block1
 
 roach2.write_int('r2dbe_vdif_0_hdr_w4',w4_0)
 roach2.write_int('r2dbe_vdif_1_hdr_w4',w4_1)
