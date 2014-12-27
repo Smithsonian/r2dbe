@@ -44,6 +44,8 @@ class VDIFFrameHeader(object):
         # words 4-7
         self.eud_vers = 0
         self.eud = [0, 0, 0, 0]
+        self.psn = 0
+        self.offset_samp = 0;
 
     @classmethod
     def from_bin(cls, bin_hdr):
@@ -77,12 +79,17 @@ class VDIFFrameHeader(object):
         if not inst.legacy_mode:
 
             # parse extended user data
-            words.extend(unpack('<4I', bin_hdr[16:32]))
+            words.extend(unpack('<I', bin_hdr[16:20]))
+            words.extend(unpack('<i', bin_hdr[20:24]))
+            words.extend(unpack('<2I', bin_hdr[24:32]))
 
             # words 4-7
             inst.eud_vers = (words[4] >> 24) & 0xff
             inst.eud[0] = words[4] & 0xffffff
             inst.eud[1:4] = words[5:8]
+            inst.psn = words[6]+2**32*words[7]
+            inst.offset_samp = words[5];
+
 
         return inst
 
