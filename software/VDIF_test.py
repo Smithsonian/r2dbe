@@ -95,8 +95,8 @@ for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 # set headers
 #######################################
 # calculate reference epoch
-ref_ep_num = 29 #2014 part 2 = 29
-ref_ep_date = datetime(2014,7,1,0,0,0) # date of start of epoch July 1 2014
+ref_ep_num = 30 #2014 part 2 = 29
+ref_ep_date = datetime(2015,1,1,0,0,0) # date of start of epoch July 1 2014
 
 ##############
 #   W0
