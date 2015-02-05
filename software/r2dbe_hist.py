@@ -73,7 +73,7 @@ x1_2 = x1_2 - 2**(bits_per_sample-1)
 bins8 = arange(-128.5,128.5,1)
 bins2 = arange(-2.5,2.5,1)
 
-ylim_8 = 0.04
+ylim_8 = 0.06
 ylim_2 = 0.5
 
 lim0_1 = -th0-0.5
