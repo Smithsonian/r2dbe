@@ -83,8 +83,10 @@ lim1_1 = -th1-0.5
 lim1_2 = -0.5
 lim1_3 = th1-0.5
 
+# create ideal gaussian shape for 8 bits
+th_id = 32 # ideal thresh
+g = mlab.normpdf(bins8, 0, th_id)
 
-g = mlab.normpdf(bins8, 0, 32)
 
 pylab.subplot(2,2,1)
 pylab.plot((lim0_1, lim0_1),(0, 1),'k--')
@@ -102,8 +104,13 @@ pylab.xlabel('bin')
 pylab.ylim(0,ylim_8)
 pylab.ylabel('Frequency')
 pylab.title('IF0: 8-bit Data Hist')
-pylab.annotate('th={0}'.format(th0),xy=(th0+5,0.025))
+pylab.annotate('th={0}'.format(th0),xy=(th0+5,0.05))
 pylab.annotate('ideal',xy=(bins8[175],g[175]),xytext=(75,0.01),arrowprops=dict(facecolor='black', width=0.1, headwidth=4, shrink=0.1))
+if th0<th_id-3:
+    pylab.annotate('low pow', xy=(th0+5,0.045))
+elif th0>th_id+3:
+    pylab.annotate('high pow', xy=(th0+5,0.045))
+
 pylab.grid()
 
 pylab.subplot(2,2,2)
@@ -122,8 +129,12 @@ pylab.xlabel('bin')
 pylab.ylim(0,ylim_8)
 pylab.ylabel('Frequency')
 pylab.title('IF1: 8-bit Data Hist')
-pylab.annotate('th={0}'.format(th1),xy=(th1+5,0.025))
+pylab.annotate('th={0}'.format(th1),xy=(th1+5,0.05))
 pylab.annotate('ideal',xy=(bins8[175],g[175]),xytext=(75,0.01),arrowprops=dict(facecolor='black', width=0.1, headwidth=4, shrink=0.1))
+if th1<th_id-3:
+    pylab.annotate('low pow', xy=(th1+5,0.045))
+elif th1>th_id+3:
+    pylab.annotate('high pow', xy=(th1+5,0.045))
 pylab.grid()
 
 
