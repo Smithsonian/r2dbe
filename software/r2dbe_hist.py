@@ -1,6 +1,7 @@
 import corr
 import struct
 from numpy import int32, uint32, array, zeros, arange
+import r2dbe_snaps
 
 import matplotlib
 import pylab
@@ -22,51 +23,16 @@ x=corr.snap.snapshots_get([roach2,roach2,roach2,roach2],
                            'r2dbe_snap_2bit_1_data'])
 
 L = x['lengths'][0]
+print x['lengths']
 #unpack the 8 bit data
-x0_8 = array(struct.unpack('>{0}b'.format(L),
-                   x['data'][0]), int32)
-x1_8 = array(struct.unpack('>{0}b'.format(L),
-                   x['data'][1]), int32)
+x0_8 = r2dbe_snaps.data_from_snap_8bit(x['data'][0],L) 
+x1_8 = r2dbe_snaps.data_from_snap_8bit(x['data'][1],L)
 
-x0_2 = zeros(L, int32)
-x1_2 = zeros(L, int32)
+x0_2 = r2dbe_snaps.data_from_snap_2bit(x['data'][2],L) 
+x1_2 = r2dbe_snaps.data_from_snap_2bit(x['data'][3],L)
         
-
-
-#unpack the 2 bit data
-# unpack data into array
-
-y_0  = array(struct.unpack('<{0}I'.format(x['lengths'][2]/4), 
-                         x['data'][2]), uint32)
-y_1  = array(struct.unpack('<{0}I'.format(x['lengths'][3]/4),                  
-                         x['data'][3]), uint32)
-
-# interpret the data given our bits-per-sample
-bits_per_sample = 2 
-samp_per_word   = 16
-
-samp_max = 2**bits_per_sample - 1
-
-for samp_n in range(samp_per_word):
-
-    # get sample data from words
-    shift_by = bits_per_sample * samp_n
-    x0_2[samp_n::samp_per_word] = (y_0 >> shift_by) & samp_max
-
-# we need to reinterpret as offset binary
-x0_2 = x0_2 - 2**(bits_per_sample-1)
-
-
-for samp_n in range(samp_per_word):
-
-    # get sample data from words
-    shift_by = bits_per_sample * samp_n
-    x1_2[samp_n::samp_per_word] = (y_1 >> shift_by) & samp_max
-
-# we need to reinterpret as offset binary
-x1_2 = x1_2 - 2**(bits_per_sample-1)
-
-
+print len(x0_8)
+print len(x0_2)
 
 # now have x0_8, x0_2, and the IF1s, now histograms
 
