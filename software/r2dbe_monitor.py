@@ -146,7 +146,7 @@ def plot_data():
     # fft
     NFFT = 1024
     freqs = linspace(0.0, 4096/2, num=NFFT/2)
-    y0_8 = rfft(split(x0_2, len(x0_2)/NFFT), axis=1)
+    y0_8 = rfft(split(x0_8, len(x0_8)/NFFT), axis=1)
     Y0_8 = (y0_8 * conjugate(y0_8)).sum(axis=0)
 
     y1_8 = rfft(split(x1_8, len(x1_8)/NFFT), axis=1)
