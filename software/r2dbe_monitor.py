@@ -3,6 +3,7 @@ import struct
 from numpy import int32, uint32, array, zeros, arange, linspace, split, conjugate, log10
 from numpy.fft import rfft
 import r2dbe_snaps
+import socket
 
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
@@ -183,17 +184,18 @@ def plot_data():
     # status
     left_lim = 0.1
     plt.subplot(1,4,4)
-    plt.annotate('fpga clk rate:          {0:.2f} MHz'.format(clk),
+    plt.annotate('{0}'.format(socket.gethostname()),
                  xy=(left_lim,0.95))
-    plt.annotate('gps pps ticks:          {0}'.format(gps_cnt),
+    plt.annotate('fpga clk rate:          {0:.2f} MHz'.format(clk),
                  xy=(left_lim,0.9))
-    plt.annotate('msr pps ticks:          {0}'.format(msr_cnt),
+    plt.annotate('gps pps ticks:          {0}'.format(gps_cnt),
                  xy=(left_lim,0.85))
-    plt.annotate('gps vs internal offset: {0} samples'.format(offset_samp),
+    plt.annotate('msr pps ticks:          {0}'.format(msr_cnt),
                  xy=(left_lim,0.8))
-
-    plt.annotate('gps vs internal offset: {0} ns'.format(offset_ns),
+    plt.annotate('gps vs internal offset: {0} samples'.format(offset_samp),
                  xy=(left_lim,0.75))
+    plt.annotate('gps vs internal offset: {0} ns'.format(offset_ns),
+                 xy=(left_lim,0.7))
     plt.xlim(0,1)
     plt.ylim(0,1)
     f = plt.gca()
