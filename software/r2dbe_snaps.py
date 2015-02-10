@@ -14,7 +14,8 @@ def data_from_snap_2bit(x,L):
    #unpack the 2 bit data
    # unpack data into array
    
-   y  = array(struct.unpack('<{0}I'.format(L/16), x), uint32)
+   # unpack it big endian
+   y  = array(struct.unpack('>{0}I'.format(L/16), x), uint32)
 
    # interpret the data given our bits-per-sample
    bits_per_sample = 2 
@@ -25,7 +26,7 @@ def data_from_snap_2bit(x,L):
    for samp_n in range(samp_per_word):
    
        # get sample data from words
-       shift_by = bits_per_sample * samp_n
+       shift_by = 30 - bits_per_sample * samp_n
        x2[samp_n::samp_per_word] = (y >> shift_by) & samp_max
    
    # we need to reinterpret as offset binary
