@@ -2,11 +2,44 @@ import corr
 import struct
 from numpy import int32, uint32, array, zeros, arange, linspace, split, conjugate, log10
 from numpy.fft import rfft
+from datetime import datetime, timedelta, tzinfo
 import r2dbe_snaps
 import socket
 
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
+
+
+class UTC(tzinfo):
+    """ UTC tzinfo """
+
+    def utcoffset(self, dt):
+        return timedelta(0)
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return timedelta(0)
+
+def r2dbe_datetime(name):
+
+    # now how many usecs per frame
+    usecs_per_frame = 8
+    
+    # get ref epoch and data_frame
+    secs_since_ep = roach2.read_int('r2dbe_vdif_'+name+'_hdr_w0_sec_ref_ep')    
+    ref_epoch     = roach2.read_int('r2dbe_vdif_'+name+'_hdr_w1_ref_ep')    
+
+    # get the date
+    date = datetime(year = 2000 + ref_epoch/2,
+                    month = 1 + (ref_epoch & 1) * 6,
+                    day = 1, tzinfo=UTC())
+
+    # get the seconds from the start of the day
+    secs = timedelta(seconds = secs_since_ep)
+
+    return date + secs
 
 def get_data():
     # read threshold values
@@ -33,12 +66,25 @@ def get_data():
     msr_cnt = roach2.read_int('r2dbe_onepps_msr_pps_cnt')            
     offset_samp = roach2.read_int('r2dbe_onepps_offset')            
     offset_ns   = float(offset_samp)/clk*1e3
+    
 
-    return x0_8, x1_8, x0_2, x1_2, th0, th1, clk, gps_cnt, msr_cnt, offset_samp,offset_ns
+    pol_chr = ['L (or X)', 'R (or Y)']
+    pol0num = roach2.read_uint('r2dbe_vdif_0_hdr_w4') & 0x1           
+    pol1num = roach2.read_uint('r2dbe_vdif_1_hdr_w4') & 0x1           
+    pol0    = pol_chr[pol0num]
+    pol1    = pol_chr[pol1num]
+    
+
+    st0num  = roach2.read_uint('r2dbe_vdif_0_hdr_w3_station_id')            
+    st1num  = roach2.read_uint('r2dbe_vdif_1_hdr_w3_station_id')            
+    st0     = ''.join([chr((st0num>>8) & 0xff), chr(st0num & 0xff)])
+    st1     = ''.join([chr((st1num>>8) & 0xff), chr(st1num & 0xff)])
+
+    return x0_8, x1_8, x0_2, x1_2, th0, th1, clk, gps_cnt, msr_cnt, offset_samp,offset_ns, pol0, pol1, st0, st1
 
 def plot_data():
     # get data
-    x0_8, x1_8, x0_2, x1_2, th0, th1, clk, gps_cnt, msr_cnt, offset_samp, offset_ns = get_data()
+    x0_8, x1_8, x0_2, x1_2, th0, th1, clk, gps_cnt, msr_cnt, offset_samp, offset_ns, pol0, pol1, st0, st1 = get_data()
     
     # now have x0_8, x0_2, and the IF1s, now histograms
     
@@ -182,20 +228,41 @@ def plot_data():
     plt.grid()
 
     # status
-    left_lim = 0.1
+    left_lim = 0.02
     plt.subplot(1,4,4)
+    plt.annotate('________________________________',
+                 xy=(left_lim,0.99))
     plt.annotate('{0}'.format(socket.gethostname()),
                  xy=(left_lim,0.95))
-    plt.annotate('fpga clk rate:          {0:.2f} MHz'.format(clk),
-                 xy=(left_lim,0.9))
-    plt.annotate('gps pps ticks:          {0}'.format(gps_cnt),
+    plt.annotate('________________________________',
+                 xy=(left_lim,0.925))
+    plt.annotate('IF0: {0}'.format(r2dbe_datetime('0')),
+                 xy=(left_lim,0.90))
+    plt.annotate('IF1: {0}'.format(r2dbe_datetime('1')),
                  xy=(left_lim,0.85))
-    plt.annotate('msr pps ticks:          {0}'.format(msr_cnt),
-                 xy=(left_lim,0.8))
-    plt.annotate('gps vs internal offset: {0} samples'.format(offset_samp),
+    plt.annotate('________________________________',
+                 xy=(left_lim,0.80))
+
+    # station ids, polarizations, etc, IF noise box, etc
+    plt.annotate('IF0: Pol {0}, station id {1}'.format(pol0,st0),
                  xy=(left_lim,0.75))
-    plt.annotate('gps vs internal offset: {0} ns'.format(offset_ns),
+    plt.annotate('IF1: Pol {0}, station id {1}'.format(pol1,st1),
                  xy=(left_lim,0.7))
+    plt.annotate('________________________________',
+                 xy=(left_lim,0.65))
+
+    # status
+    plt.annotate('fpga clk rate (est):       {0:.2f} MHz'.format(clk),
+                 xy=(left_lim,0.6))
+    plt.annotate('gps pps ticks (secs past): {0}'.format(gps_cnt),
+                 xy=(left_lim,0.55))
+    plt.annotate('msr pps ticks:             {0}'.format(msr_cnt),
+                 xy=(left_lim,0.50))
+    plt.annotate('gps vs internal offset:    {0} samples'.format(offset_samp),
+                 xy=(left_lim,0.45))
+    plt.annotate('gps vs internal offset:    {0} ns'.format(offset_ns),
+                 xy=(left_lim,0.4))
+
     plt.xlim(0,1)
     plt.ylim(0,1)
     f = plt.gca()
