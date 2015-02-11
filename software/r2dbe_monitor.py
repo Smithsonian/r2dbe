@@ -258,7 +258,7 @@ def plot_data():
                  xy=(left_lim,0.50))
     plt.annotate('gps vs internal offset:    {0} samples'.format(offset_samp),
                  xy=(left_lim,0.45))
-    plt.annotate('gps vs internal offset:    {0} ns'.format(offset_ns),
+    plt.annotate('gps vs internal offset:    {0} ns'.format(round(offset_ns)),
                  xy=(left_lim,0.4))
 
     plt.xlim(0,1)
