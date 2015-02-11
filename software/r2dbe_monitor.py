@@ -102,7 +102,7 @@ def plot_data():
     lim1_3 = th1-0.5
     
     # create ideal gaussian shape for 8 bits
-    th_id = 32 # ideal thresh
+    th_id = 30 # ideal thresh
     g = mlab.normpdf(bins8, 0, th_id)
 
     plt.clf()
