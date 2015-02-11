@@ -22,7 +22,7 @@ class UTC(tzinfo):
     def dst(self, dt):
         return timedelta(0)
 
-def r2dbe_datetime(name):
+def r2dbe_datetime(name,gps_cnt):
 
     # now how many usecs per frame
     usecs_per_frame = 8
@@ -37,7 +37,7 @@ def r2dbe_datetime(name):
                     day = 1, tzinfo=UTC())
 
     # get the seconds from the start of the day
-    secs = timedelta(seconds = secs_since_ep)
+    secs = timedelta(seconds = secs_since_ep + gps_cnt)
 
     return date + secs
 
@@ -230,15 +230,13 @@ def plot_data():
     # status
     left_lim = 0.02
     plt.subplot(1,4,4)
-    plt.annotate('________________________________',
-                 xy=(left_lim,0.99))
     plt.annotate('{0}'.format(socket.gethostname()),
                  xy=(left_lim,0.95))
     plt.annotate('________________________________',
                  xy=(left_lim,0.925))
-    plt.annotate('IF0: {0}'.format(r2dbe_datetime('0')),
+    plt.annotate('IF0: {0}'.format(r2dbe_datetime('0',gps_cnt)),
                  xy=(left_lim,0.90))
-    plt.annotate('IF1: {0}'.format(r2dbe_datetime('1')),
+    plt.annotate('IF1: {0}'.format(r2dbe_datetime('1',gps_cnt)),
                  xy=(left_lim,0.85))
     plt.annotate('________________________________',
                  xy=(left_lim,0.80))
