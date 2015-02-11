@@ -62,8 +62,8 @@ def get_data():
     x1_2 = r2dbe_snaps.data_from_snap_2bit(x['data'][3],L)
 
     clk = roach2.est_brd_clk()            
-    gps_cnt = roach2.read_int('r2dbe_onepps_gps_pps_cnt')            
-    msr_cnt = roach2.read_int('r2dbe_onepps_msr_pps_cnt')            
+    gps_cnt = roach2.read_uint('r2dbe_onepps_gps_pps_cnt')            
+    msr_cnt = roach2.read_uint('r2dbe_onepps_msr_pps_cnt')            
     offset_samp = roach2.read_int('r2dbe_onepps_offset')            
     offset_ns   = float(offset_samp)/clk*1e3
     
