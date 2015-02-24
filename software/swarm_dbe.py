@@ -32,7 +32,13 @@ print 'connected'
 #roach2.progdev('swarm_2_comp_2015_Feb_06_1511.bof')
 #roach2.progdev('swarm_2_comp_2015_Feb_16_1223.bof')
 #roach2.progdev('swarm_2_comp_2015_Feb_16_1508.bof')
-roach2.progdev('swarm_2_comp_2015_Feb_17_1841.bof')
+#roach2.progdev('swarm_2_comp_2015_Feb_17_1841.bof')
+#roach2.progdev('swarm_2_comp_2015_Feb_18_1441.bof') # works little end, bad record
+#roach2.progdev('swarm_2_comp_2015_Feb_18_2312.bof') # 320 works for headers, not all data is good 
+#roach2.progdev('swarm_2_comp_2015_Feb_19_1121.bof') 
+#roach2.progdev('swarm_2_comp_2015_Feb_19_1828.bof') fixed but wrong pps per
+roach2.progdev('swarm_2_comp_2015_Feb_19_1935.bof') 
+#roach2.progdev('swarm_2_comp_2015_Feb_20_1146.bof') 
 roach2.wait_connected()
 print 'progdevd'
 
@@ -176,7 +182,7 @@ roach2.write_int('vdif_0_little_end', 1)
 #roach2.write_int('vdif_1_little_end', 1)
 
 # reverse time order (per vdif spec)
-roach2.write_int('vdif_0_reorder_2b_samps', 1)
+roach2.write_int('vdif_0_reorder_2b_samps', 0)
 #roach2.write_int('vdif_1_reorder_2b_samps', 1)
 
 # set to test-vector noise mode
@@ -187,7 +193,7 @@ roach2.write_int('quantize_0_thresh', 2)
 
 # must wait to set the enable signal until pps signal is stable
 sleep(2)
-#roach2.write_int('vdif_0_enable', 1)
+roach2.write_int('vdif_0_enable', 1)
 #roach2.write_int('vdif_1_enable', 1)
 
 
