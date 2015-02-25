@@ -14,7 +14,7 @@ def mstat(num):
     return_code = vals[0].split('?')
 
     module_info = {
-    'Return code': 
+    'Return code': vals[0], 
     'Cplane return code': vals[1],
     'Group': vals[2],
     'Slot':  vals[3],
