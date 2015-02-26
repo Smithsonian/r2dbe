@@ -18,7 +18,7 @@ class UTC(tzinfo):
 
 class VDIFFrameHeader(object):
 
-    def __init__(self, sample_rate=4096e6):
+    def __init__(self, sample_rate=2496e6):
         self.sample_rate = sample_rate
 
         # word 0
@@ -44,6 +44,10 @@ class VDIFFrameHeader(object):
         # words 4-7
         self.psn = 0
         self.beng = 0
+        self.b = 0
+        self.c = 0
+        self.f = 0
+        self.z = 0
 
     @classmethod
     def from_bin(cls, bin_hdr):
@@ -82,8 +86,20 @@ class VDIFFrameHeader(object):
             # words 4-7
             inst.psn = words[6]+2**32*words[7]
 
-            inst.beng = (words[4]*2**32 + words[5]);
+            beng = words[4]*2**32 + words[5];
+            inst.beng = beng
+            MASK_0_7  = 0xff
+            MASK_0_39 = 0xffffffffff 
 
+            inst.b = (beng>>24) & MASK_0_39
+
+            ctop = (beng>>63)
+            cbot = (beng>>0) & MASK_0_7
+            inst.c = ctop*2**3 + cbot
+
+            inst.f = (beng>>16) & MASK_0_7
+
+            inst.z = (beng>>8)  & MASK_0_7
 
         return inst
 
@@ -169,6 +185,10 @@ class VDIFFrame(VDIFFrameHeader):
     def __init__(self):
         super(VDIFFrame, self).__init__()
         self.data = array([], int32)
+        self.p0r = array([], int32)
+        self.p0i = array([], int32)
+        self.p1r = array([], int32)
+        self.p1i = array([], int32)
 
     @classmethod
     def from_bin(cls, bin_frame):
@@ -185,6 +205,10 @@ class VDIFFrame(VDIFFrameHeader):
         # create empty data buffer
         samp_per_word = 32 / inst.bits_per_sample
         inst.data = zeros(samp_per_word * data_words, int32)
+        inst.p0r = zeros(samp_per_word * data_words/4, int32)
+        inst.p0i = zeros(samp_per_word * data_words/4, int32)
+        inst.p1r = zeros(samp_per_word * data_words/4, int32)
+        inst.p1i = zeros(samp_per_word * data_words/4, int32)
 
         # unpack data into array
         words = array(unpack('<{0}I'.format(data_words), bin_frame[data_start:data_stop]), uint32)
@@ -194,11 +218,15 @@ class VDIFFrame(VDIFFrameHeader):
         for samp_n in range(samp_per_word):
 
             # get sample data from words
-            shift_by = inst.bits_per_sample * samp_n
+            shift_by = 32 - inst.bits_per_sample * (samp_n+1)
             inst.data[samp_n::samp_per_word] = (words >> shift_by) & samp_max
 
         # we need to reinterpret as offset binary
         inst.data = inst.data - 2**(inst.bits_per_sample-1)
+        inst.p0r = inst.data[0::4]
+        inst.p0i = inst.data[1::4]
+        inst.p1r = inst.data[2::4]
+        inst.p1i = inst.data[3::4]
 
         return inst
 
