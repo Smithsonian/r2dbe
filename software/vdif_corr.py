@@ -130,9 +130,11 @@ while not end_of_frames:
             if baseline[0] == baseline[1]:
                 part_autos = autos.get(baseline[0], zeros_like(prod))
                 autos[baseline[0]] = part_autos + prod
+                autos[baseline[0]][0] = 0 # zero-out DC
             else:
                 part_cross = cross.get(baseline, zeros_like(prod))
                 cross[baseline] = part_cross + prod
+                cross[baseline][0] = 0 # zero-out DC
 
     # increment frame count
     frame_n += 1
@@ -146,12 +148,12 @@ while not end_of_frames:
         end_of_frames = True
 
 # find our frequency range
-freqs = linspace(0.0, args.sample_rate/2, num=args.NFFT/2)
+freqs = linspace(0.0, args.sample_rate/2, num=1+args.NFFT/2)
 
 # plot the auto spectra
 pylab.figure()
 for name, auto in autos.iteritems():
-    pylab.step(freqs, 10*log10(abs(auto[1:])), label=name)
+    pylab.step(freqs[1:], 10*log10(abs(auto[1:])), label=name)
     # pylab.plot(abs(auto[1:]), label=name)
     # pylab.semilogy(freqs, abs(auto[1:]), label=name)
 pylab.title('Auto-correlation Amplitudes')
@@ -160,10 +162,18 @@ pylab.xlabel('Frequency (MHz)')
 pylab.xlim(0, args.sample_rate/2)
 pylab.legend()
 
-# plot the cross phase spectra
+# plot the cross phase spectra and amplitude
 for baseline in cross:
     pylab.figure()
-    pylab.plot(freqs, angle(cross[baseline])[1:], '.', label='{0} X {1}'.format(*baseline))
+    pylab.subplot(2, 1, 1)
+    pylab.plot(freqs[1:], 10*log10(abs(cross[baseline])[1:]), '-', label='{0} X {1}'.format(*baseline))
+    pylab.title('Cross-correlation Amplitude')
+    pylab.ylabel('Amplidue (dB)')
+    pylab.xlabel('Frequency (MHz)')
+    pylab.xlim(0, args.sample_rate/2)
+    pylab.legend()
+    pylab.subplot(2, 1, 2)
+    pylab.plot(freqs[1:], angle(cross[baseline])[1:], '.', label='{0} X {1}'.format(*baseline))
     pylab.title('Cross-correlation Phase')
     pylab.ylabel('Phase (rads)')
     pylab.xlabel('Frequency (MHz)')
