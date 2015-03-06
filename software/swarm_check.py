@@ -12,7 +12,7 @@ from numpy import (
     )
 
 import checks
-from swarm import VDIFFrameHeader, VDIFFrame
+from swarm import DBEFrame 
 
 # parse the user's command line arguments
 parser = argparse.ArgumentParser(description='check a VDIF file for header/data quality')
@@ -73,7 +73,7 @@ with open(args.filename, 'rb') as file_:
     file_.seek(args.skip_bytes)
 
     # get the first VDIF header
-    first_hdr = VDIFFrameHeader.from_bin(file_.read(32))
+    first_hdr = DBEFrame.from_bin(file_.read(1056))
     logger.debug('first header: {0}'.format(repr(first_hdr)))
 
     # determine the packet size
@@ -86,7 +86,7 @@ with open(args.filename, 'rb') as file_:
 
     # get the last VDIF header
     file_.seek(-pkt_size, 2)
-    last_hdr = VDIFFrameHeader.from_bin(file_.read(32))
+    last_hdr = DBEFrame.from_bin(file_.read(1056))
     logger.debug('last header: {0}'.format(repr(last_hdr)))
 
     # get start, stop, and total time
@@ -124,7 +124,7 @@ with open(args.filename, 'rb') as file_:
             break
 
         # create frame object
-        header = VDIFFrameHeader.from_bin(pkt)
+        header = DBEFrame.from_bin(pkt)
 
         # go through every error-type check
         for check in error_checks:
