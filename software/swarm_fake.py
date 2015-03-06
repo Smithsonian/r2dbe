@@ -39,12 +39,12 @@ class DBEFrame(VDIFFrame):
                                           +1j*inst.data[idstart+2::16])
 
         # b-engine is in W45 of the VDIF header, found in eud[0,1]
-        beng = uint64(inst.eud[0]*2**32 + inst.eud[1])
-        c_bot  =  beng      & MASK7
-        inst.z = (beng>>7)  & MASK8
-        inst.f = (beng>>15) & MASK8
-        inst.b = (beng>>23) & MASK40
-        c_top  = beng>>31   & 0x1
+        beng = inst.eud[1]
+        c_bot  =  beng      & MASK8
+        inst.z = (beng>>6)  & MASK8
+        inst.f = (beng>>16) & MASK8
+        inst.b = (beng>>24) & MASK8+2**8*(inst.eud[0] & MASK39)
+        c_top  = (inst.eud[0]>>31)   & 0x1
         inst.c = c_top*2**7+c_bot
  
         return inst        
