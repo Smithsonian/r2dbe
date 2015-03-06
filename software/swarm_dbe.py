@@ -37,9 +37,8 @@ print 'connected'
 #roach2.progdev('swarm_2_comp_2015_Feb_18_2312.bof') # 320 works for headers, not all data is good 
 #roach2.progdev('swarm_2_comp_2015_Feb_19_1121.bof') 
 #roach2.progdev('swarm_2_comp_2015_Feb_19_1828.bof') fixed but wrong pps per
-#roach2.progdev('swarm_2_comp_2015_Feb_19_1935.bof') 
+roach2.progdev('swarm_2_comp_2015_Feb_19_1935.bof') 
 #roach2.progdev('swarm_2_comp_2015_Feb_20_1146.bof') 
-roach2.progdev('swarm_2_comp_2015_Feb_26_2010.bof') # fake packets 
 roach2.wait_connected()
 print 'progdevd'
 
