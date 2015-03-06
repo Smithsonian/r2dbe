@@ -23,25 +23,12 @@ thread_id_1 = 0
 
 roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
 roach2.wait_connected()
-print 'connected'
-
 # swarm file
 #roach2.progdev('swarm_2_comp_2015_Feb_03_2327.bof')
 #roach2.progdev('swarm_2_comp_2015_Feb_05_1358.bof')
 #roach2.progdev('swarm_2_comp_2015_Feb_06_1302.bof')
-#roach2.progdev('swarm_2_comp_2015_Feb_06_1511.bof')
-#roach2.progdev('swarm_2_comp_2015_Feb_16_1223.bof')
-#roach2.progdev('swarm_2_comp_2015_Feb_16_1508.bof')
-#roach2.progdev('swarm_2_comp_2015_Feb_17_1841.bof')
-#roach2.progdev('swarm_2_comp_2015_Feb_18_1441.bof') # works little end, bad record
-#roach2.progdev('swarm_2_comp_2015_Feb_18_2312.bof') # 320 works for headers, not all data is good 
-#roach2.progdev('swarm_2_comp_2015_Feb_19_1121.bof') 
-#roach2.progdev('swarm_2_comp_2015_Feb_19_1828.bof') fixed but wrong pps per
-roach2.progdev('swarm_2_comp_2015_Feb_19_1935.bof') 
-#roach2.progdev('swarm_2_comp_2015_Feb_20_1146.bof') 
+roach2.progdev('swarm_2_comp_2015_Feb_06_1511.bof')
 roach2.wait_connected()
-print 'progdevd'
-
 
 # arm the one pps
 roach2.write_int('onepps_ctrl', 1<<31)
@@ -51,17 +38,20 @@ sleep(2)
 # set 10 gbe vals
 
 arp = [0xffffffffffff] * 256
+mac_eth3 = ni.ifaddresses('eth3')[17][0]['addr']
+mac_hex3  = int(mac_eth3.translate(None,':'),16)
 mac_eth5 = ni.ifaddresses('eth5')[17][0]['addr']
 mac_hex5  = int(mac_eth5.translate(None,':'),16)
 
 
+arp[3] = mac_hex3
 arp[5] = mac_hex5
 
 # can be entered manually
 #arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
 #arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
 
-ip = ni.ifaddresses('eth5')[2][0]['addr']
+ip = ni.ifaddresses('eth3')[2][0]['addr']
 ipb = [x for x in map(str.strip, ip.split('.'))]
 
 ip_b3 = int(ipb[0])
@@ -74,7 +64,7 @@ ip_b0 = int(ipb[3])
 #ip_b2 = 16
 #ip_b0 = 15 #should be last 2 digits of name: Mark6-40**
 
-i=5
+i=3
 name= 'tengbe_0'
 
 src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((i*10)<<8) + ip_b0
@@ -182,7 +172,7 @@ roach2.write_int('vdif_0_little_end', 1)
 #roach2.write_int('vdif_1_little_end', 1)
 
 # reverse time order (per vdif spec)
-roach2.write_int('vdif_0_reorder_2b_samps', 0)
+roach2.write_int('vdif_0_reorder_2b_samps', 1)
 #roach2.write_int('vdif_1_reorder_2b_samps', 1)
 
 # set to test-vector noise mode
