@@ -12,7 +12,7 @@ from numpy import (
     )
 
 import checks
-from swarm import DBEFrame 
+from swarm_fake import DBEFrame 
 
 # parse the user's command line arguments
 parser = argparse.ArgumentParser(description='check a VDIF file for header/data quality')
@@ -62,6 +62,9 @@ sanity_checks = (
     checks.ListingCheck('unique thread IDs found', 'thread_id'),
     checks.ListingCheck('unique station IDs found', 'station_id'),
     checks.ListingCheck('unique sample bitwidths found', 'bits_per_sample'),
+    checks.ListingCheck('unique fids found', 'f'),
+    checks.ListingCheck('unique bcount found', 'b'),
+    checks.ListingCheck('unique c found', 'c'),
     checks.CountNotEqualTo('Non-zero B-eng zeros', 'z', 0),
     )
 
