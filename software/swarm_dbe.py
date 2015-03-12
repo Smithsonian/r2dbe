@@ -40,8 +40,9 @@ print 'connected'
 #roach2.progdev('swarm_2_comp_2015_Feb_19_1935.bof') 
 #roach2.progdev('swarm_2_comp_2015_Feb_20_1146.bof') 
 #roach2.progdev('swarm_2_comp_2015_Feb_26_2010.bof') # fake packets 
-#roach2.progdev('swarm_2_comp_2015_Mar_07_2121.bof') # real_pkts
-roach2.progdev('swarm_2_comp_2015_Mar_08_1257_.bof') # fake_pkts
+#roach2.progdev('swarm_2_comp_2015_Feb_27_2046.bof') 
+#roach2.progdev('swarm_2_comp_2015_Mar_08_2108.bof') 
+roach2.progdev('swarm_2_comp_2015_Mar_11_1408.bof') 
 roach2.wait_connected()
 print 'progdevd'
 
@@ -53,36 +54,41 @@ sleep(2)
 
 # set 10 gbe vals
 
-arp = [0xffffffffffff] * 256
-mac_eth5 = ni.ifaddresses('eth5')[17][0]['addr']
-mac_hex5  = int(mac_eth5.translate(None,':'),16)
+# black hold mac address 
+# 000f530cd899
+# broadcast 0xffffffffffff
+arp = [0x000f530cd899] * 256
+#mac_eth5 = ni.ifaddresses('eth5')[17][0]['addr']
+#mac_hex5  = int(mac_eth5.translate(None,':'),16)
 
 
-arp[5] = mac_hex5
+# the last byte of the ip address is the entry in the table
+arp[30] = 0x000f530cd111
 
 # can be entered manually
 #arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
 #arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
 
-ip = ni.ifaddresses('eth5')[2][0]['addr']
-ipb = [x for x in map(str.strip, ip.split('.'))]
+#ip = ni.ifaddresses('eth5')[2][0]['addr']
+#ipb = [x for x in map(str.strip, ip.split('.'))]
 
-ip_b3 = int(ipb[0])
-ip_b2 = int(ipb[1])
-ip_b0 = int(ipb[3])
+#ip_b3 = int(ipb[0])
+#ip_b2 = int(ipb[1])
+#ip_b0 = int(ipb[3])
 
 
 # can be entered manually
-#ip_b3 = 172
-#ip_b2 = 16
-#ip_b0 = 15 #should be last 2 digits of name: Mark6-40**
+# use p6p2
+ip_b3 = 192
+ip_b2 = 168
+ip_b1 = 11
+ip_b0 = 30
 
-i=5
 name= 'tengbe_0'
-
-src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((i*10)<<8) + ip_b0
+# use p6p2
+src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((ip_b1)<<8) + 29
 src_mac = (2<<40) + (2<<32) + 20 + src_ip
-dest_ip = (ip_b3<<24) + (ip_b2<<16) + (i<<8) + ip_b0
+dest_ip = (ip_b3<<24) + (ip_b2<<16) + (ip_b1<<8) + ip_b0
 
 roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 4000, arp)
 roach2.write_int('' + name + '_dest_ip', dest_ip)
@@ -92,6 +98,14 @@ roach2.write_int('' + name + '_dest_port', 4001)
 roach2.write_int('' + name + '_rst', 1)
 roach2.write_int('' + name + '_rst', 0)
 
+name= 'tengbe_rx0'
+src_ip  = (157<<24) + (0<<16) + (0<<8) + 1
+src_mac = 0x000f9d9d9d00
+roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 0xbea3, arp)
+
+# reset tengbe (this is VITAL)
+roach2.write_int('' + name + '_rst', 1)
+roach2.write_int('' + name + '_rst', 0)
 
 #######################################
 # set headers

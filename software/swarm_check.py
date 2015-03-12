@@ -12,7 +12,7 @@ from numpy import (
     )
 
 import checks
-from swarm_fake import DBEFrame 
+from swarm import DBEFrame 
 
 # parse the user's command line arguments
 parser = argparse.ArgumentParser(description='check a VDIF file for header/data quality')
@@ -65,6 +65,7 @@ sanity_checks = (
     checks.ListingCheck('unique fids found', 'f'),
     checks.ListingCheck('unique bcount found', 'b'),
     checks.ListingCheck('unique c found', 'c'),
+    checks.ListingCheck('unique eud_vers found', 'eud_vers'),
     checks.CountNotEqualTo('Non-zero B-eng zeros', 'z', 0),
     )
 
@@ -148,6 +149,8 @@ with open(args.filename, 'rb') as file_:
         if frame_n == args.frames_to_check:
             end_of_frames = True
 
+        
+
     # tell user we finished
     logger.info('\nfinished checking {0} frames. printing summary...'.format(frame_n))
 
@@ -160,6 +163,7 @@ with open(args.filename, 'rb') as file_:
     logger.info('\nprinting sanity-type check results...')
     for i, check in enumerate(sanity_checks):
         logger.info('sanity-type check #{0}. {1}'.format(i, check))
+
 
     # finish up
     logger.info('\nchecked quality for {0} frames of {1}'.format(frame_n, args.filename))
