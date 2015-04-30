@@ -5,8 +5,8 @@ import netifaces as ni
 
 is_test = 0
 
-station_id_0  = 'lh'  # dummy, chose lh for laura, high band (7-9 GHz)
-station_id_1  = 'll'  # dummy, chose ll for laura, low band (5-7 GHz)
+station_id_0  = 'Sm'  # SMA Phased # dummy, chose lh for laura, high band (7-9 GHz)
+station_id_1  = 'Sm'  # SMA Phased # dummy, chose ll for laura, low band (5-7 GHz)
 
 # set pol for both blocks
 # dual pol
@@ -17,8 +17,9 @@ pol_block1  = 0
 
 # set thread id for both blocks
 # perhaps thread is always 0?
-thread_id_0 = 0
-thread_id_1 = 0
+#thread_id_0 = 0
+#thread_id_1 = 0
+thread_id = (0,0,0,0)
 
 
 roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
@@ -79,33 +80,63 @@ arp[30] = 0x000f530cd111
 
 # can be entered manually
 # use p6p2
-ip_b3 = 192
-ip_b2 = 168
-ip_b1 = 11
-ip_b0 = 30
+ip_b3 = 172
+ip_b2 = 16
+ip_b0 = 45 
+#ip_b3 = 192
+#ip_b2 = 168
+#ip_b1 = 11
+#ip_b0 = 30
 
-name= 'tengbe_0'
+# set up tx interfaces
+for iif in range(0,4):
+	name = 'tengbe_' + str(iif)
+	# third octet in IP corresponds to eth if on mark6: eth2 -> 2, eth3 -> 3, etc
+	ip_b1 = iif+2
+	src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((ip_b1)<<8) + 29
+	src_mac = (2<<40) + (2<<32) + 20 + src_ip
+	dest_ip = (ip_b3<<24) + (ip_b2<<16) + (ip_b1<<8) + ip_b0
+
+	roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 4000, arp)
+	roach2.write_int('' + name + '_dest_ip', dest_ip)
+	roach2.write_int('' + name + '_dest_port', 4001)
+
+	# reset tengbe (this is VITAL)
+	roach2.write_int('' + name + '_rst', 1)
+	roach2.write_int('' + name + '_rst', 0)
+
+#name= 'tengbe_0'
 # use p6p2
-src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((ip_b1)<<8) + 29
-src_mac = (2<<40) + (2<<32) + 20 + src_ip
-dest_ip = (ip_b3<<24) + (ip_b2<<16) + (ip_b1<<8) + ip_b0
+#src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((ip_b1)<<8) + 29
+#src_mac = (2<<40) + (2<<32) + 20 + src_ip
+#dest_ip = (ip_b3<<24) + (ip_b2<<16) + (ip_b1<<8) + ip_b0
 
-roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 4000, arp)
-roach2.write_int('' + name + '_dest_ip', dest_ip)
-roach2.write_int('' + name + '_dest_port', 4001)
-
-# reset tengbe (this is VITAL)
-roach2.write_int('' + name + '_rst', 1)
-roach2.write_int('' + name + '_rst', 0)
-
-name= 'tengbe_rx0'
-src_ip  = (157<<24) + (0<<16) + (0<<8) + 1
-src_mac = 0x000f9d9d9d00
-roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 0xbea3, arp)
+#roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 4000, arp)
+#roach2.write_int('' + name + '_dest_ip', dest_ip)
+#roach2.write_int('' + name + '_dest_port', 4001)
 
 # reset tengbe (this is VITAL)
-roach2.write_int('' + name + '_rst', 1)
-roach2.write_int('' + name + '_rst', 0)
+#roach2.write_int('' + name + '_rst', 1)
+#roach2.write_int('' + name + '_rst', 0)
+
+# set up rx interfaces
+for iif in range(0,4):
+	name = 'tengbe_rx' + str(iif)
+	src_ip  = (157<<24) + (0<<16) + (0<<8) + 1+iif
+	src_mac = 0x000f9d9d9d00+iif
+	roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 0xbea3, arp)
+
+	roach2.write_int('' + name + '_rst', 1)
+	roach2.write_int('' + name + '_rst', 0)
+
+#name= 'tengbe_rx0'
+#src_ip  = (157<<24) + (0<<16) + (0<<8) + 1
+#src_mac = 0x000f9d9d9d00
+#roach2.config_10gbe_core('' + name + '_core', src_mac, src_ip, 0xbea3, arp)
+
+# reset tengbe (this is VITAL)
+#roach2.write_int('' + name + '_rst', 1)
+#roach2.write_int('' + name + '_rst', 0)
 
 #######################################
 # set headers
@@ -130,18 +161,34 @@ nday = sec_ref_ep/24/3600
 #print delta.total_seconds()
 #print 'secs since ref ep: %d' %sec_ref_ep
 #print 'days since ref ep: %d' %nday
-roach2.write_int('vdif_0_hdr_w0_reset',1)
-roach2.write_int('vdif_0_hdr_w0_reset',0)
+
+for ii in range(0,4):
+	dev_name = 'vdif_%d_hdr_w0_reset' % ii
+	roach2.write_int(dev_name,1)
+	roach2.write_int(dev_name,0)
+
+#roach2.write_int('vdif_0_hdr_w0_reset',1)
+#roach2.write_int('vdif_0_hdr_w0_reset',0)
 #roach2.write_int('vdif_1_hdr_w0_reset',1)
 #roach2.write_int('vdif_1_hdr_w0_reset',0)
-roach2.write_int('vdif_0_hdr_w0_sec_ref_ep',sec_ref_ep)
+
+for ii in range(0,4):
+	dev_name = 'vdif_%d_hdr_w0_sec_ref_ep' % ii
+	roach2.write_int(dev_name,sec_ref_ep)
+
+#roach2.write_int('vdif_0_hdr_w0_sec_ref_ep',sec_ref_ep)
 #roach2.write_int('vdif_1_hdr_w0_sec_ref_ep',sec_ref_ep)
+
 
 #############
 #   W1
 #############
 #print "reference epoch number: %d" %ref_ep_num
-roach2.write_int('vdif_0_hdr_w1_ref_ep',ref_ep_num)
+for ii in range(0,4):
+	dev_name = 'vdif_%d_hdr_w1_ref_ep' % ii
+	roach2.write_int(dev_name,ref_ep_num)
+
+#roach2.write_int('vdif_0_hdr_w1_ref_ep',ref_ep_num)
 #roach2.write_int('vdif_1_hdr_w1_ref_ep',ref_ep_num)
 
 
@@ -155,14 +202,29 @@ roach2.write_int('vdif_0_hdr_w1_ref_ep',ref_ep_num)
 ############
 #   W3 
 ############
-roach2.write_int('vdif_0_hdr_w3_thread_id', thread_id_0)
+
+for ii in range(0,4):
+	dev_name = 'vdif_%d_hdr_w3_thread_id' % ii
+	roach2.write_int(dev_name,thread_id[ii])
+
+#roach2.write_int('vdif_0_hdr_w3_thread_id', thread_id_0)
 #roach2.write_int('vdif_1_hdr_w3_thread_id', thread_id_1)
 
 # convert chars to 16 bit int
 st0 = ord(station_id_0[0])*2**8 + ord(station_id_0[1])
 st1 = ord(station_id_1[0])*2**8 + ord(station_id_1[1])
 
-roach2.write_int('vdif_0_hdr_w3_station_id', st0)
+# TODO : update station ids for 2/3
+st2 = st0
+st3 = st1
+
+st = (st0,st1,st2,st3)
+
+for ii in range(0,4):
+	dev_name = 'vdif_%d_hdr_w3_station_id' % ii
+	roach2.write_int(dev_name,st[ii])
+
+#roach2.write_int('vdif_0_hdr_w3_station_id', st0)
 #roach2.write_int('vdif_1_hdr_w3_station_id', st1)
 
 
@@ -191,27 +253,45 @@ roach2.write_int('vdif_0_hdr_w3_station_id', st0)
 
 
 # select test data 
-roach2.write_int('vdif_0_test_sel', is_test)
+for ii in range(0,4):
+	dev_name = 'vdif_%d_test_sel' % ii
+	roach2.write_int(dev_name, is_test)
+
+#roach2.write_int('vdif_0_test_sel', is_test)
 #roach2.write_int('vdif_1_test_sel', is_test)
 
 # use little endian word order
-roach2.write_int('vdif_0_little_end', 1)
+for ii in range(0,4):
+	dev_name = 'vdif_%d_little_end' % ii
+	roach2.write_int(dev_name, 1)
+
+#roach2.write_int('vdif_0_little_end', 1)
 #roach2.write_int('vdif_1_little_end', 1)
 
 # reverse time order (per vdif spec)
-roach2.write_int('vdif_0_reorder_2b_samps', 0)
+for ii in range(0,4):
+	dev_name = 'vdif_%d_reorder_2b_samps' % ii
+	roach2.write_int(dev_name, 0)
+
+#roach2.write_int('vdif_0_reorder_2b_samps', 0)
 #roach2.write_int('vdif_1_reorder_2b_samps', 1)
 
 # set to test-vector noise mode
 #execfile('alc.py')
-roach2.write_int('quantize_0_thresh', 2)
+for ii in range(0,4):
+	dev_name = 'quantize_%d_thresh' % ii
+	roach2.write_int(dev_name,2)
+
+#roach2.write_int('quantize_0_thresh', 2)
 #roach2.write_int('quantize_1_thresh', 2)
 
 
 # must wait to set the enable signal until pps signal is stable
 sleep(2)
-roach2.write_int('vdif_0_enable', 1)
+for ii in range(0,4):
+	dev_name = 'vdif_%d_enable' % ii
+	roach2.write_int(dev_name, 1)
+
+#roach2.write_int('vdif_0_enable', 1)
 #roach2.write_int('vdif_1_enable', 1)
-
-
 
