@@ -95,13 +95,17 @@ for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 # set headers
 #######################################
 # calculate reference epoch
-ref_ep_num = 30 #2014 part 2 = 29
-ref_ep_date = datetime(2015,1,1,0,0,0) # date of start of epoch July 1 2014
+utcnow = datetime.utcnow()
+ref_start = datetime(2000,1,1,0,0,0)
+
+nyrs = utcnow.year - ref_start.year 
+ref_ep_num = 2*nyrs+1*(utcnow.month>6)
+
+ref_ep_date = datetime(utcnow.year,6*(utcnow.month>6)+1,1,0,0,0) # date of start of epoch July 1 2014
 
 ##############
 #   W0
 ##############
-utcnow = datetime.utcnow()
 
 
 delta       = utcnow-ref_ep_date
