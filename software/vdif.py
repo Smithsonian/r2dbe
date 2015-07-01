@@ -81,7 +81,7 @@ class VDIFFrameHeader(object):
 
             # parse extended user data
             words.extend(unpack('<I', bin_hdr[16:20]))
-            words.extend(unpack('<I', bin_hdr[20:24]))
+            words.extend(unpack('<i', bin_hdr[20:24]))
             words.extend(unpack('<2I', bin_hdr[24:32]))
 
             # words 4-7
