@@ -43,7 +43,8 @@ print 'connected'
 #roach2.progdev('swarm_2_comp_2015_Feb_26_2010.bof') # fake packets 
 #roach2.progdev('swarm_2_comp_2015_Feb_27_2046.bof') 
 #roach2.progdev('swarm_2_comp_2015_Mar_08_2108.bof') 
-roach2.progdev('swarm_2_comp_2015_Mar_11_1408.bof') 
+#roach2.progdev('swarm_2_comp_2015_Mar_11_1408.bof') 
+roach2.progdev('sdbe_8_11.bof') 
 roach2.wait_connected()
 print 'progdevd'
 
@@ -82,7 +83,7 @@ arp[30] = 0x000f530cd111
 # use p6p2
 ip_b3 = 172
 ip_b2 = 16
-ip_b0 = 45 
+ip_b0 = 52 
 #ip_b3 = 192
 #ip_b2 = 168
 #ip_b1 = 11
