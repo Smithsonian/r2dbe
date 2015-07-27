@@ -10,8 +10,17 @@
 # python script should be at this path
 ROOT_DIR="/usr/local/src/r2dbe/software"
 
+# logfile path
+LOG_DIR="/var/log/r2dbe"
+LOG_FILE="$LOG_DIR/maser-drift.log"
+
 # network interface for incoming VDIF
 IFACE="eth5"
+
+# check if path exists for logfile
+if [ ! -d "$LOG_DIR" ] ; then
+	mkdir $LOG_DIR
+fi
 
 function capture_packet() {
 	tcpdump -B 1024 -xnn -i $1 '(udp[22]=0)and(udp[20:2]<=0x0001)and(udp[16]&0x3f=0)' -c 1 -w /tmp/cap1pkt.pcap 2>/dev/null
@@ -33,8 +42,9 @@ trap do_exit SIGINT
 
 # run indefinitely until told to stop
 while return_zero ; do
-	if capture_packet $IFACE && python $ROOT_DIR/get_drift_from_vdif.py /tmp/cap1pkt.vdif ; then
-		sleep 0.1
+	if capture_packet $IFACE && python $ROOT_DIR/get_drift_from_vdif.py -l $LOG_FILE /tmp/cap1pkt.vdif ; then
+		# only capture every 64 seconds, give it 2 seconds extra time
+		sleep 62
 	else 
 		break
 	fi
