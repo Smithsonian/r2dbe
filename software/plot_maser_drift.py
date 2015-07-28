@@ -48,17 +48,25 @@ hours_rel = hours_since_first_epoch-args.hour_offset
 drift_ns = drift * DELTA_T_PER_COUNT * 1e9
 
 # fit quadratic polynomial
-a,b,c = polyfit(hours_rel,drift_ns,deg=2)
-y_fit = a*hours_rel**2 + b*hours_rel + c
+sec_rel = hours_rel*3600
+drift_sec = drift_ns*1e-9
+a,b,c = polyfit(sec_rel,drift_sec,deg=2)
+quad_fit = a*sec_rel**2 + b*sec_rel + c
+#slope = (2*a*sec_rel + b).mean() # could derive a slope parameter from quadratic fit too
+m,k = polyfit(sec_rel,drift_sec,deg=1)
+lin_fit = m*sec_rel + k
+#print a,b,c
+#print m,k
 
-print "Relative frequency offset is: {0:+.7} [Hz/Hz]".format(b*1e-9/3600)
-print " Relative frequency slope is: {0:+.7} [Hz/Hz/s]".format(a*1e-9/3600)
+print "Relative frequency offset is: {0:+.7} [Hz/Hz] ({1:+.7} [ps/s])".format(m,m*1e12)
+print " Relative frequency slope is: {0:+.7} [Hz/Hz/s]".format(a)
 
 # plot
 fig = plt.figure()
 ax = plt.axes()
 ax.plot(hours_rel,drift_ns,'o',mfc='b',mec='b',label=args.label)
-ax.plot(hours_rel,y_fit,'k-',label='quadratic fit')
+ax.plot(hours_rel,quad_fit*1e9,'k-',label='quadratic fit')
+ax.plot(hours_rel,lin_fit*1e9,'r--',label='linear fit')
 ax.set_xlabel('Hours since 00:00:00 1 Jan 2000 - {0}'.format(args.hour_offset))
 ax.set_ylabel('Maser second relative to GPS second [ns]')
 ax.legend()
