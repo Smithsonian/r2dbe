@@ -211,7 +211,7 @@ for p in range(2):
 
     with np.errstate(invalid='ignore'):
          x_sum=np.nansum(x[:,args.gl:args.gh],axis=1)
-         x_freqs=np.sum(np.isfinite(x),axis=1)
+         x_freqs=np.sum(np.isfinite(x[:,args.gl:args.gh]),axis=1)
          x_mean=np.divide(x_sum,x_freqs)
 
     plt.plot(np.hstack(([0],np.flipud(x_mean),[0],[0])),[-3,-2,-1,0,1,2,3],drawstyle='steps',label='mean over band')
