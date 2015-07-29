@@ -5,7 +5,7 @@
 ./grab_consec.sh get_data 2048 eth4
 ./grab_consec.sh get_data 2048 eth5
 
-python plot_hist_corrs.py -v -t -gl 1000 -gh 12000 get_data*vdif
+python plot_hist_corrs.py -v -t -gl 800 -gh 14000 get_data*vdif
 
 rm get_data_eth2.vdif
 rm get_data_eth3.vdif

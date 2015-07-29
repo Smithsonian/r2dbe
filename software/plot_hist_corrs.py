@@ -161,7 +161,7 @@ if args.thresh:
         tp = (th >> 8) & 0xf    
         chunks[1]=chunks[1]+', Daves Thresh (tn,t0,tp): ({0},{1},{2})'.format(tn,t0,tp)
     else:
-        t = (th >> 0) & 0x7f     
+        t = (th >> 1) & 0x7f     
         chunks[1]=chunks[1]+', Old Thresh T: {0}'.format(t)
 
 for p in range(2):
@@ -172,7 +172,7 @@ for p in range(2):
      
     cmap=matplotlib.cm.jet
    
-    #cmap.set_bad('w',0.) # set nans white
+    #cmap.set_bad('w',1.) # set nans white
     cmap.set_bad('k',1.)  # set nans black
    
     ax = plt.axes(ax_p[p])
@@ -246,19 +246,19 @@ data_cross= nanmean(nanmean(data_cr,axis=2),axis=0)
 
 N = 2**14
 k = np.arange(N)
-Fs = 3328 # MHz
+Fs = args.sample_rate # MHz
 freq = k*Fs/2/N
 
 ax_corrs = [[0.05,0.1+0.25,0.9,0.55],[0.05,0.1,0.9,0.2]]
 
 ax = plt.axes(ax_corrs[0])
-plt.plot(freq,10*np.log10(data_auto[0]),label='p0xp0')
-plt.plot(freq,10*np.log10(data_auto[1]),label='p1xp1')
-plt.plot(freq,10*np.log10(data_cross),color='k',label='p0xp1')
+plt.plot(freq,10*np.log10(np.abs(data_auto[0])),'.',label='p0xp0')
+plt.plot(freq,10*np.log10(np.abs(data_auto[1])),'.',label='p1xp1')
+plt.plot(freq,10*np.log10(np.abs(data_cross)),'k.',label='p0xp1')
 plt.grid()
 plt.ylabel('Power (dB rel)')
 ax.set_xticklabels([])
-plt.xlim([0,3328./2])
+plt.xlim([0,args.sample_rate/2])
 plt.ylim([-10,5])
 plt.title('Autos and Cross Corr Log Mag')
 plt.legend()
@@ -266,7 +266,6 @@ plt.legend()
 
 ax = plt.axes(ax_corrs[1])
 plt.plot(freq,np.angle(data_cross),'kx')
-print 'angle {0}'.format(np.angle(data_cross))
 plt.ylim([-np.pi,np.pi])
 plt.xlim([0,3328./2])
 plt.ylabel('Phase (rad)')
