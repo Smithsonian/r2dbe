@@ -107,21 +107,15 @@ ref_ep_date = datetime(utcnow.year,6*(utcnow.month>6)+1,1,0,0,0) # date of start
 #   W0
 ##############
 
+roach2.write_int('r2dbe_vdif_0_hdr_w0_reset',1)
+roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',1)
 
-delta       = utcnow-ref_ep_date
+delta       = datetime.utcnow()-ref_ep_date
 sec_ref_ep  = delta.seconds + 24*3600*delta.days
 
-# to check
-nday = sec_ref_ep/24/3600
-
-#secs_ref_ep_nday, number of days since reference epoch began
-#print delta.total_seconds()
-#print 'secs since ref ep: %d' %sec_ref_ep
-#print 'days since ref ep: %d' %nday
-roach2.write_int('r2dbe_vdif_0_hdr_w0_reset',1)
 roach2.write_int('r2dbe_vdif_0_hdr_w0_reset',0)
-roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',1)
 roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',0)
+
 roach2.write_int('r2dbe_vdif_0_hdr_w0_sec_ref_ep',sec_ref_ep)
 roach2.write_int('r2dbe_vdif_1_hdr_w0_sec_ref_ep',sec_ref_ep)
 
