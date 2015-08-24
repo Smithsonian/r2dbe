@@ -27,6 +27,18 @@ for p = 1:length(periods)
     stop_ind  = start_ind+duration-1;
 end
 
+% pps at 30, calculate sec_ref_ep number and set it right at time 0, set to
+% 0
+
+sec_ref_ep.time = [];
+sec_ref_ep.signals.values = blank_sig;
+sec_ref_ep.signals.values(50:end)=10;
+
+% now set reset signals AFTER first pps at time 30
+reset.time = [];
+reset.signals.values = blank_sig;
+reset.signals.values(20:49) = 1; % so ends up being on for 10 clocks, then back to 0
+
 
 % set enable signal
 enable.time = [];
