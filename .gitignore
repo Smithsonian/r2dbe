@@ -6,3 +6,7 @@
 
 # EMACS back-ups
 *~
+
+# matlab auto-stuff
+*.autosave
+*.log
