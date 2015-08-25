@@ -96,18 +96,20 @@ xd.signals.values = blank_sig;
 
 % set data values to something, data stream 16 times the length of ind data
 % data set to single pulse with pps timing, so data0 at each pulse is a 1
-data_stream = repmat(blank_sig,16,1);
-data_stream(start_pps*16:second*16:end)=1;
+data_matrix = repmat(blank_sig,1,16);
+data_matrix(start_pps:second:end,1)=1;
 
-% limit data to 2 bit value
-data_stream=mod(data_stream,4);
+
+
+data_stream = reshape(data_matrix.',16*length(blank_sig),1);
+
 
 % distribute data_stream into the 16 matlab variables
-d_stream = reshape(data_stream,16,length(data_stream)/16).';
 for k=0:15
-    xd.signals.values = d_stream(:,k+1);
+    xd.signals.values = data_matrix(:,k+1);
     eval(['data',num2str(k),'=xd;'])
 end
+
 
 
 
@@ -140,6 +142,18 @@ xlim([0 40000])
 title('Input Data')
 
 
+figure
+hold all
+stairs(pps.signals.values+1,'k')
+for k=0:15
+    eval(['x=data',num2str(k),';'])
+    stairs(x.signals.values-k*1)
+end
+set(gca,'YTick',[-15 -14:2:0 1])
+set(gca,'YTickLabel',{'data15','data14','data12','data10','data8','data6','data4','data2','data0','pps'})
+
+
+
 
 
 
@@ -148,26 +162,30 @@ title('Input Data')
 
 % get data
 x = [];
-for k=0:15
+for k=0:31
     eval(['x = [x data_out',num2str(k),'.Data];'])
 end
-data_stream_out = reshape(x.',1,length(data_out0.Data)*16);
+data_stream_out = reshape(x.',1,length(data_out0.Data)*32);
 
 
-dt = 1/16;
-ti = [1:length(data_stream)]*dt;
-to = [1:length(data_stream_out)]*dt;
+dt1 = 1/16;
+dt2 = 1/32;
+ti = [0:length(data_stream)-1]*dt1;
+to = [0:length(data_stream_out)-1]*dt2;
+tpi= [0:length(blank_sig)-1];
+tpo= [0:length(sync_out.Data)-1];
 figure
 hold all
 stairs(ti,data_stream,'b')
 stairs(to,data_stream_out,'r')
-stairs(pps.signals.values,'k:')
-stairs(sync_out.Data,'k:')
+stairs(tpi,pps.signals.values,'k:')
+stairs(tpo,sync_out.Data,'k:')
+stairs(tpo,data_valid_out.Data*2,'k')
 ylim([-1 2])
 legend('input data','output data','pps in','pps out')
 title('vdif: mk 64 from 32 input and output data timing, 2 clocks latency ')
-xlim([12317 12321])
-xlabel('fpga clocks (16 data samples each clock)')
+xlim([12317 12323])
+xlabel('fpga clocks (16 data samples each clock in, 32 data samples each clock out)')
 
 
 %% now analyze output values
@@ -227,6 +245,19 @@ stairs(frame_out.Data/2)
 legend('pps out','frame num','secs since ref','start of frame')
 xlim([0 40000])
 title('Output Data')
+
+
+
+
+figure
+hold all
+stairs(sync_out.Data+1,'k')
+for k=0:31
+    eval(['x=data_out',num2str(k),';'])
+    stairs(x.Data-k*1)
+end
+set(gca,'YTick',[-31 -30:4:0 0 1])
+set(gca,'YTickLabel',{'data_out31','data_out30','data_out26','data_out22','data_out18','data_out14','data_out10','data_out6','data_out2','data_out0','pps'})
 
 
 % ()
