@@ -32,12 +32,12 @@ end
 
 sec_ref_ep.time = [];
 sec_ref_ep.signals.values = blank_sig;
-sec_ref_ep.signals.values(50:end)=10;
+sec_ref_ep.signals.values(50:end)=0;
 
 % now set reset signals AFTER first pps at time 30
 reset.time = [];
 reset.signals.values = blank_sig;
-reset.signals.values(20:49) = 1; % so ends up being on for 10 clocks, then back to 0
+reset.signals.values(10:19) = 1; % so ends up being on for 10 clocks, then back to 0
 
 
 % set enable signal
@@ -55,20 +55,43 @@ x.signals.values = blank_sig;
 
 % set data values to something, data stream 16 times the length of ind data
 % data set to single pulse with pps timing, so data0 at each pulse is a 1
-data_stream = repmat(blank_sig,16,1);
-data_stream(start_pps*16:second*16:end)=1;
+data_matrix = repmat(blank_sig,1,16);
+data_matrix(start_pps:second:end,1)=1;
 
-% limit data to 2 bit value
-data_stream=mod(data_stream,4);
+
+
+data_stream = reshape(data_matrix.',16*length(blank_sig),1);
+
 
 % distribute data_stream into the 16 matlab variables
-d_stream = reshape(data_stream,16,length(data_stream)/16).';
 for k=0:15
-    x.signals.values = d_stream(:,k+1);
+    x.signals.values = data_matrix(:,k+1);
     eval(['data',num2str(k),'=x;'])
 end
 
+
+figure
+hold all
+stairs(pps.signals.values+1,'k')
+for k=0:15
+    eval(['x=data',num2str(k),';'])
+    stairs(x.signals.values-k*1)
+end
+set(gca,'YTick',[-15 -14:2:0 1])
+set(gca,'YTickLabel',{'data15','data14','data12','data10','data8','data6','data4','data2','data0','pps'})
+
+
+
+
+
+
+
+
 % set breakpoint, run simulation
+
+
+
+
 
 % get data
 x = [];
@@ -78,15 +101,20 @@ end
 data_stream_out = reshape(x.',1,length(data_out0.Data)*16);
 
 
+
+
+
 dt = 1/16;
-ti = [1:length(data_stream)]*dt;
-to = [1:length(data_stream_out)]*dt;
+ti = [0:length(data_stream)-1]*dt;
+to = [0:length(data_stream_out)-1]*dt;
+tpi= [0:length(blank_sig)-1];
+tpo= [0:length(sync_out.Data)-1];
 figure
 hold all
 stairs(ti,data_stream,'b')
 stairs(to,data_stream_out,'r')
-stairs(pps.signals.values,'k:')
-stairs(sync_out.Data,'k:')
+stairs(tpi,pps.signals.values,'k:')
+stairs(tpo,sync_out.Data,'k:')
 ylim([-1 2])
 legend('input data','output data','pps in','pps out')
 title('vdif: hdr block input and output timing, latency of 2 clocks ')
