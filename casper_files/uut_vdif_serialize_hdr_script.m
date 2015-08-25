@@ -73,16 +73,17 @@ xd.signals.values = blank_sig;
 
 % set data values to something, data stream 16 times the length of ind data
 % data set to single pulse with pps timing, so data0 at each pulse is a 1
-data_stream = repmat(blank_sig,16,1);
-data_stream(start_pps*16:second*16:end)=1;
+data_matrix = repmat(blank_sig,1,16);
+data_matrix(start_pps:second:end,1)=1;
 
-% limit data to 2 bit value
-data_stream=mod(data_stream,4);
+
+
+data_stream = reshape(data_matrix.',16*length(blank_sig),1);
+
 
 % distribute data_stream into the 16 matlab variables
-d_stream = reshape(data_stream,16,length(data_stream)/16).';
 for k=0:15
-    xd.signals.values = d_stream(:,k+1);
+    xd.signals.values = data_matrix(:,k+1);
     eval(['data',num2str(k),'=xd;'])
 end
 
@@ -112,6 +113,18 @@ title('Input Data')
 
 
 
+figure
+hold all
+stairs(pps.signals.values+1,'k')
+for k=0:15
+    eval(['x=data',num2str(k),';'])
+    stairs(x.signals.values-k*1)
+end
+set(gca,'YTick',[-15 -14:2:0 1])
+set(gca,'YTickLabel',{'data15','data14','data12','data10','data8','data6','data4','data2','data0','pps'})
+
+
+
 
 
 
@@ -126,18 +139,20 @@ data_stream_out = reshape(x.',1,length(data_out0.Data)*16);
 
 
 dt = 1/16;
-ti = [1:length(data_stream)]*dt;
-to = [1:length(data_stream_out)]*dt;
+ti = [0:length(data_stream)-1]*dt;
+to = [0:length(data_stream_out)-1]*dt;
+tpi= [0:length(blank_sig)-1];
+tpo= [0:length(sync_out.Data)-1];
 figure
 hold all
 stairs(ti,data_stream/2,'b')
 stairs(to,data_stream_out,'r')
-stairs(pps.signals.values/2,'k:')
-stairs(sync_out.Data,'k:')
+stairs(tpi,pps.signals.values/2,'k:')
+stairs(tpo,sync_out.Data,'k:')
 ylim([-1 2])
 legend('input data','output data','pps in','pps out')
 title('vdif: serialize hdr block input and output data timing, no latency ')
-xlim([12317 12321])
+xlim([12313 12321])
 xlabel('fpga clocks (16 data samples each clock)')
 
 
