@@ -110,6 +110,11 @@ ref_ep_date = datetime(utcnow.year,6*(utcnow.month>6)+1,1,0,0,0) # date of start
 roach2.write_int('r2dbe_vdif_0_hdr_w0_reset',1)
 roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',1)
 
+# wait until middle of second for calculation
+while(abs(datetime.utcnow().microsecond-5e5)>1e5):
+    sleep(0.1)
+   
+# rapidly calculate current time and reset hdr (~10 ms) 
 delta       = datetime.utcnow()-ref_ep_date
 sec_ref_ep  = delta.seconds + 24*3600*delta.days
 
