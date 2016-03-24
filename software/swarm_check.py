@@ -116,6 +116,8 @@ with open(args.filename, 'rb') as file_:
 
     # go through every frame
     end_of_frames = False
+    vdif_time_0 = None
+    vdif_time_1 = None
     while not end_of_frames:
     
         # read one packet
@@ -129,6 +131,9 @@ with open(args.filename, 'rb') as file_:
 
         # create frame object
         header = DBEFrame.from_bin(pkt)
+        if not vdif_time_0:
+            vdif_time_0 = '{0}@{1}.{2}'.format(header.ref_epoch,header.secs_since_epoch,header.data_frame)
+        vdif_time_1 = '{0}@{1}.{2}'.format(header.ref_epoch,header.secs_since_epoch,header.data_frame)
 
         # go through every error-type check
         for check in error_checks:
@@ -167,3 +172,6 @@ with open(args.filename, 'rb') as file_:
 
     # finish up
     logger.info('\nchecked quality for {0} frames of {1}'.format(frame_n, args.filename))
+
+    # time range
+    logger.info('\nVDIF time range: {0} .. {1}'.format(vdif_time_0,vdif_time_1))
