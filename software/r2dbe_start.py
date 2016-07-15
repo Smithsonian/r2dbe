@@ -4,11 +4,15 @@ from datetime import datetime, time, timedelta
 import netifaces as ni
 from socket import inet_ntoa
 from struct import pack
+import subprocess
+import sys
 
 import argparse
 parser = argparse.ArgumentParser(description='Set 2-bit quantization threshold')
 parser.add_argument('-b','--boffile',metavar='BOFFILE',type=str,default='r2dbe_rev2.bof',
     help="program the fpga with BOFFILE (default is 'r2dbe_rev2.bof')")
+parser.add_argument('-f','--file',metavar="CONFIG",type=str,default=None,
+    help="read configuration from file CONFIG, if None then use default values hard-coded in script (default is None)")
 parser.add_argument('-t','--timeout',metavar='TIMEOUT',type=float,default=5.0,
     help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
 parser.add_argument('-v','--verbose',action='count',
@@ -19,27 +23,78 @@ args = parser.parse_args()
 
 is_test = 0
 
-station_id_0  = 'lh'  # dummy, chose lh for laura, high band (7-9 GHz)
-station_id_1  = 'll'  # dummy, chose ll for laura, low band (5-7 GHz)
+# polarization configuration constants
+_POL_XL = 0
+_POL_YR = 1
+_POL_CHAR_TO_FLAG = {
+    'L':_POL_XL,
+    'X':_POL_XL,
+    '0':_POL_XL,
+    'R':_POL_YR,
+    'Y':_POL_YR,
+    '1':_POL_YR
+}
+# BDC sideband configuration constants
+_BDC_LSB = 0
+_BDC_USB = 1
+_BDC_CHAR_TO_FLAG = {
+    'L':_BDC_LSB,
+    '0':_BDC_LSB,
+    'U':_BDC_USB,
+    '1':_BDC_USB
+}
+# receiver sideband configuration constants
+_REC_LSB = 0
+_REC_USB = 1
+_REC_CHAR_TO_FLAG = {
+    'L':_REC_LSB,
+    '0':_REC_LSB,
+    'U':_REC_USB,
+    '1':_REC_USB
+}
+
+_DEFAULT_CONFIG = {
+    'if0':
+        {'station_id':'lh','pol':'1','bdc_sideband':'0','rec_sideband':'0'},
+    'if1':
+        {'station_id':'ll','pol':'1','bdc_sideband':'0','rec_sideband':'0'}
+}
+
+config = _DEFAULT_CONFIG
+if args.file is not None:
+    from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
+    rcp = RawConfigParser()
+    if rcp.read(args.file):
+        if args.verbose > 1:
+            print "reading configuration from file '{0}'".format(args.file)
+        for sec in ['if0','if1']:
+            for key in ['station_id','pol','bdc_sideband','rec_sideband']:
+                try:
+                    config[sec][key] = rcp.get(sec,key)
+                except (NoOptionError, NoSectionError) as e:
+                    print "WARNING: <{0}.{1}> not in configuration file, using default value '{2}'".format(
+                        sec,key,config[sec][key])
+    else:
+        msg = "Could not read configuration form file '{0}'".format(args.file)
+        raise RuntimeError(msg)
+
+station_id_0 = config['if0']['station_id']
+station_id_1 = config['if1']['station_id']
 
 # set pol for both blocks
 # dual pol
 # 0 is X or L
 # 1 is Y or R
-pol_block0  = 1
-pol_block1  = 0
+pol_block0 = _POL_CHAR_TO_FLAG[config['if0']['pol']]
+pol_block1 = _POL_CHAR_TO_FLAG[config['if1']['pol']]
 
 # set EHT BDC sideband
-BDC_LSB = 0
-BDC_USB = 1
-bdc_sb0 = BDC_LSB
-bdc_sb1 = BDC_USB
+bdc_sb0 = _BDC_CHAR_TO_FLAG[config['if0']['bdc_sideband']]
+bdc_sb1 = _BDC_CHAR_TO_FLAG[config['if1']['bdc_sideband']]
 
 # set RX sideband
-REC_LSB = 0
-REC_USB = 1
-rec_sb0 = REC_USB
-rec_sb1 = REC_USB
+rec_sb0 = _REC_CHAR_TO_FLAG[config['if0']['rec_sideband']]
+rec_sb1 = _REC_CHAR_TO_FLAG[config['if1']['rec_sideband']]
 
 # set thread id for both blocks
 # perhaps thread is always 0?
@@ -263,7 +318,12 @@ roach2.write_int('r2dbe_vdif_0_reorder_2b_samps', 1)
 roach2.write_int('r2dbe_vdif_1_reorder_2b_samps', 1)
 
 # set to test-vector noise mode
-execfile('alc.py')
+alc_args = [sys.executable, 'alc.py']
+alc_args.append('-t {0}'.format(args.timeout))
+for add_v in xrange(args.verbose):
+    alc_args.append('-v')
+alc_args.append(args.host)
+subprocess.call(alc_args)
 
 # must wait to set the enable signal until pps signal is stable
 sleep(2)
