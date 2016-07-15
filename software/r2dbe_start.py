@@ -15,6 +15,18 @@ station_id_1  = 'll'  # dummy, chose ll for laura, low band (5-7 GHz)
 pol_block0  = 1
 pol_block1  = 0
 
+# set EHT BDC sideband
+BDC_LSB = 0
+BDC_USB = 1
+bdc_sb0 = BDC_LSB
+bdc_sb1 = BDC_USB
+
+# set RX sideband
+REC_LSB = 0
+REC_USB = 1
+rec_sb0 = REC_USB
+rec_sb1 = REC_USB
+
 # set thread id for both blocks
 # perhaps thread is always 0?
 thread_id_0 = 0
@@ -159,8 +171,8 @@ roach2.write_int('r2dbe_vdif_1_hdr_w3_station_id', st1)
 
 eud_vers = 0x02
 
-w4_0 = eud_vers*2**24 + pol_block0
-w4_1 = eud_vers*2**24 + pol_block1
+w4_0 = eud_vers*2**24 + rec_sb0*4 + bdc_sb0*2 + pol_block0
+w4_1 = eud_vers*2**24 + rec_sb1*4 + bdc_sb1*2 + pol_block1
 
 roach2.write_int('r2dbe_vdif_0_hdr_w4',w4_0)
 roach2.write_int('r2dbe_vdif_1_hdr_w4',w4_1)
