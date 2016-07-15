@@ -12,6 +12,16 @@ import pylab
 import numpy
 import sys
 
+import argparse
+parser = argparse.ArgumentParser(description='Set 2-bit quantization threshold')
+parser.add_argument('-t','--timeout',metavar='TIMEOUT',type=float,default=5.0,
+    help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
+parser.add_argument('-v','--verbose',action='count',
+    help="control verbosity, use multiple times for more detailed output")
+parser.add_argument('host',metavar='R2DBE',type=str,nargs='?',default='r2dbe-1',
+    help="hostname or ip address of r2dbe (default is 'r2dbe-1')")
+args = parser.parse_args()
+
 try:
     import matplotlib as mpl
     # Must disable path simplifcation to allow fringe peaks to be seen even in dense plots
@@ -42,8 +52,13 @@ def plotSpectrum(y,Fs,tstr):
 	title(tstr)
 
 print 'Connecting...'
-roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
-roach2.wait_connected()
+# connect to roach2
+roach2 = corr.katcp_wrapper.FpgaClient(args.host)
+if not roach2.wait_connected(timeout=args.timeout):
+    msg = "Could not establish connection to '{0}' within {1} seconds, aborting".format(
+        args.host,args.timeout)
+    raise RuntimeError(msg)
+
 
 Fs = 2*2048e6 # R2DBE sampling freq
 Nif    = 2  # R2DBE typically 2 IFs

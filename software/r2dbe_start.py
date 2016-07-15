@@ -2,6 +2,20 @@ import adc5g, corr
 from time import sleep
 from datetime import datetime, time, timedelta
 import netifaces as ni
+from socket import inet_ntoa
+from struct import pack
+
+import argparse
+parser = argparse.ArgumentParser(description='Set 2-bit quantization threshold')
+parser.add_argument('-b','--boffile',metavar='BOFFILE',type=str,default='r2dbe_rev2.bof',
+    help="program the fpga with BOFFILE (default is 'r2dbe_rev2.bof')")
+parser.add_argument('-t','--timeout',metavar='TIMEOUT',type=float,default=5.0,
+    help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
+parser.add_argument('-v','--verbose',action='count',
+    help="control verbosity, use multiple times for more detailed output")
+parser.add_argument('host',metavar='R2DBE',type=str,nargs='?',default='r2dbe-1',
+    help="hostname or ip address of r2dbe (default is 'r2dbe-1')")
+args = parser.parse_args()
 
 is_test = 0
 
@@ -32,12 +46,40 @@ rec_sb1 = REC_USB
 thread_id_0 = 0
 thread_id_1 = 0
 
+if args.verbose > 0:
+    print "################## Configuration for {0} ##################".format(args.host)
+    print ""
+    print "[if0]"
+    print "station_id={0}".format(station_id_0)
+    print "pol={0}".format(pol_block0)
+    print "bdc_sideband={0}".format(bdc_sb0)
+    print "rec_sideband={0}".format(rec_sb0)
+    print ""
+    print "[if1]"
+    print "station_id={0}".format(station_id_1)
+    print "pol={0}".format(pol_block1)
+    print "bdc_sideband={0}".format(bdc_sb1)
+    print "rec_sideband={0}".format(rec_sb1)
+    print ""
+    print "########################### {0} ###########################".format(args.host)
 
-roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
-roach2.wait_connected()
-roach2.progdev('r2dbe_rev2.bof')
+# connect to roach2
+roach2 = corr.katcp_wrapper.FpgaClient(args.host)
+if not roach2.wait_connected(timeout=args.timeout):
+    msg = "Could not establish connection to '{0}' within {1} seconds, aborting".format(
+        args.host,args.timeout)
+    raise RuntimeError(msg)
+if args.verbose > 1:
+    print "connected to '{0}'".format(args.host)
+# program bitcode
+roach2.progdev(args.boffile)
+if not roach2.wait_connected(timeout=args.timeout):
+    msg = "Could not establish connection to '{0}' within {1} seconds, aborting".format(
+        args.host,args.timeout)
+    raise RuntimeError(msg)
+if args.verbose > 1:
+    print "programmed bitcode '{0}'".format(args.boffile)
 
-roach2.wait_connected()
 
 # set data mux to ADC
 roach2.write_int('r2dbe_data_mux_0_sel', 1)
@@ -92,16 +134,23 @@ for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 
     src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((i*10)<<8) + ip_b0
     src_mac = (2<<40) + (2<<32) + 20 + src_ip
+    src_port = 4000
     dest_ip = (ip_b3<<24) + (ip_b2<<16) + (i<<8) + ip_b0
+    dest_port = 4001
 
-    roach2.config_10gbe_core('r2dbe_' + name + '_core', src_mac, src_ip, 4000, arp)
+    roach2.config_10gbe_core('r2dbe_' + name + '_core', src_mac, src_ip, src_port, arp)
     roach2.write_int('r2dbe_' + name + '_dest_ip', dest_ip)
-    roach2.write_int('r2dbe_' + name + '_dest_port', 4001)
+    roach2.write_int('r2dbe_' + name + '_dest_port', dest_port)
 
     # reset tengbe (this is VITAL)
     roach2.write_int('r2dbe_' + name + '_rst', 1)
     roach2.write_int('r2dbe_' + name + '_rst', 0)
-
+    
+    if args.verbose > 1:
+        print "{4}: {0}:{1} --> {2}:{3}".format(
+            inet_ntoa(pack('!I',src_ip)),src_port,
+            inet_ntoa(pack('!I',dest_ip)),dest_port,
+            name)
 
 #######################################
 # set headers
@@ -135,6 +184,10 @@ roach2.write_int('r2dbe_vdif_1_hdr_w0_reset',0)
 
 roach2.write_int('r2dbe_vdif_0_hdr_w0_sec_ref_ep',sec_ref_ep)
 roach2.write_int('r2dbe_vdif_1_hdr_w0_sec_ref_ep',sec_ref_ep)
+
+if args.verbose > 1:
+    print "VDIF start time is {0:d}@{1:d}+{2:06d}".format(
+        ref_ep_num,sec_ref_ep,0)
 
 #############
 #   W1
