@@ -15,7 +15,7 @@ parser.add_argument('-f','--file',metavar="CONFIG",type=str,default=None,
     help="read configuration from file CONFIG, if None then use default values hard-coded in script (default is None)")
 parser.add_argument('-t','--timeout',metavar='TIMEOUT',type=float,default=5.0,
     help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
-parser.add_argument('-v','--verbose',action='count',
+parser.add_argument('-v','--verbose',action='count',default=0,
     help="control verbosity, use multiple times for more detailed output")
 parser.add_argument('host',metavar='R2DBE',type=str,nargs='?',default='r2dbe-1',
     help="hostname or ip address of r2dbe (default is 'r2dbe-1')")
