@@ -275,7 +275,7 @@ def plot_data():
 if __name__ == '__main__':
 
     import argparse
-    parser = argparse.ArgumentParser(description='Set 2-bit quantization threshold')
+    parser = argparse.ArgumentParser(description='Monitor R2DBE status')
     parser.add_argument('-t','--timeout',metavar='TIMEOUT',type=float,default=5.0,
         help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
     parser.add_argument('-v','--verbose',action='count',

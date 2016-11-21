@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 import argparse
-parser = argparse.ArgumentParser(description='Set 2-bit quantization threshold')
+parser = argparse.ArgumentParser(description='Configure and start up R2DBE')
 parser.add_argument('-b','--boffile',metavar='BOFFILE',type=str,default='r2dbe_rev2.bof',
     help="program the fpga with BOFFILE (default is 'r2dbe_rev2.bof')")
 parser.add_argument('-f','--file',metavar="CONFIG",type=str,default=None,
