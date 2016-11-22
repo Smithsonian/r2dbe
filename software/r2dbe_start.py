@@ -145,9 +145,11 @@ adc5g.set_test_mode(roach2, 0)
 adc5g.set_test_mode(roach2, 1)
 adc5g.sync_adc(roach2)
 opt, glitches = adc5g.calibrate_mmcm_phase(roach2, 0, ['r2dbe_snap_8bit_0_data',])
-print opt, glitches
+gstr = adc5g.pretty_glitch_profile(opt,glitches)
+print "ADC0 calibration found optimal phase: {0:2d} [{1}]".format(opt,gstr)
 opt, glitches = adc5g.calibrate_mmcm_phase(roach2, 1, ['r2dbe_snap_8bit_1_data',])
-print opt, glitches
+gstr = adc5g.pretty_glitch_profile(opt,glitches)
+print "ADC1 calibration found optimal phase: {0:2d} [{1}]".format(opt,gstr)
 adc5g.unset_test_mode(roach2, 0)
 adc5g.unset_test_mode(roach2, 1)
 
