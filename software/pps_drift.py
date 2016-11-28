@@ -11,7 +11,7 @@ DEFAULT_LOG_FILE = '/var/log/r2dbe/pps-drift.log'
 VDIF_PKTS_PER_SECOND = 125000
 DELTA_T_PER_COUNT = 1/256e6 # drift counter runs on 256 MHz clock
 
-parser = ArgumentParser(description='Plot PPS drift logfile')
+parser = ArgumentParser(description='Analyze PPS drift logfile')
 parser.add_argument('-v', dest='verbose', help='display debugging logs')
 parser.add_argument('-l', dest='label', default='data', help='data label in plot legend')
 parser.add_argument('-H', dest='hour_offset', type=int, default=0, help='offset x-axis ticks by this many hours (default is 0)')

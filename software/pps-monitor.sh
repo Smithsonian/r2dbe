@@ -12,7 +12,7 @@ ROOT_DIR="/usr/local/src/r2dbe/software"
 
 # logfile path
 LOG_DIR="/var/log/r2dbe"
-LOG_FILE="$LOG_DIR/maser-drift.log"
+LOG_FILE="$LOG_DIR/pps-drift.log"
 
 # network interface for incoming VDIF
 IFACE="eth5"
@@ -42,7 +42,7 @@ trap do_exit SIGINT
 
 # run indefinitely until told to stop
 while return_zero ; do
-	if capture_packet $IFACE && python $ROOT_DIR/get_drift_from_vdif.py -l $LOG_FILE /tmp/cap1pkt.vdif ; then
+	if capture_packet $IFACE && python $ROOT_DIR/capture_pps_offset.py -l $LOG_FILE /tmp/cap1pkt.vdif ; then
 		# only capture every 64 seconds, give it 2 seconds extra time
 		sleep 62
 	else 
