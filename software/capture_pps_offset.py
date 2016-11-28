@@ -15,7 +15,7 @@ from vdif import VDIFFrame
 
 VDIF_PKT_SIZE = 8224
 DEFAULT_LOG_FILE = '/var/log/r2dbe/pps-drift.log'
-LOG_HEADER = 'ref_epoch,secs_since_epoch,data_frame,drift_count\r\n'
+LOG_HEADER = 'ref_epoch,sec_since_epoch,data_frame,pps_offset\r\n'
 # typical lines in log file are 22 characters wide, and one line per second means +/-2MB per day, so 100MB is roughly 50 days
 MAX_LOG_FILE_SIZE = 100*2**20
 
