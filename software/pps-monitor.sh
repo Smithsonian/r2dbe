@@ -2,9 +2,9 @@
 
 # Captures single VDIF packet on the given network interface, extracts timestamp and maser drift numbers, and
 # append to log file. Should typically be run with superuser privileges in the background
-# 	$ sudo ./drift-monitor.sh &
-# The log file is stored by default in /var/log/r2dbe/maser-drift.log but can be changed by passing the -l 
-# argument to the python script (see get_drift_from_vdif.py for more information). The log file is CSV format
+# 	$ sudo ./pps-monitor.sh &
+# The log file is stored by default in /var/log/r2dbe/pps-drift.log but can be changed by passing the -l 
+# argument to the python script (see capture_pps_offset.py for more information). The log file is CSV format
 # with a single header line that describes the data fields.
 
 # python script should be at this path
