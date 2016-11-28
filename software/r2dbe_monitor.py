@@ -5,6 +5,9 @@ from numpy.fft import rfft
 from datetime import datetime, timedelta, tzinfo
 import r2dbe_snaps
 import socket
+import subprocess
+import sys
+import time
 
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
@@ -280,9 +283,24 @@ if __name__ == '__main__':
         help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
     parser.add_argument('-v','--verbose',action='count',
         help="control verbosity, use multiple times for more detailed output")
+    parser.add_argument('--no-X', dest='noX', action='store_true',
+        help="run non-X version of R2DBE monitor")
     parser.add_argument('host',metavar='R2DBE',type=str,nargs='?',default='r2dbe-1',
         help="hostname or ip address of r2dbe (default is 'r2dbe-1')")
     args = parser.parse_args()
+
+    if args.noX:
+        mon_nox_args = [sys.executable, "r2dbe_monitor_nox.py"]
+        if args.verbose is not None:
+            for iv in range(args.verbose):
+                mon_nox_args.append('-v')
+        mon_nox_args.append('-t')
+        mon_nox_args.append('%f'%args.timeout)
+        mon_nox_args.append(args.host)
+        print "Running R2DBE monitor in no-X mode: {0}".format(' '.join(mon_nox_args))
+	time.sleep(2)
+        subprocess.check_call(mon_nox_args)
+        sys.exit(0)
 
     # connect to roach2
     roach2 = corr.katcp_wrapper.FpgaClient(args.host)
