@@ -44,7 +44,7 @@ print 'connected'
 #roach2.progdev('swarm_2_comp_2015_Feb_27_2046.bof') 
 #roach2.progdev('swarm_2_comp_2015_Mar_08_2108.bof') 
 #roach2.progdev('swarm_2_comp_2015_Mar_11_1408.bof') 
-roach2.progdev('sdbe_8_11.bof') 
+roach2.progdev('sdbe_8pac_11.bof') 
 roach2.wait_connected()
 print 'progdevd'
 
