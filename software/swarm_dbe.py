@@ -22,7 +22,7 @@ pol_block1  = 0
 thread_id = (0,0,0,0)
 
 
-roach2 = corr.katcp_wrapper.FpgaClient('r2dbe-1')
+roach2 = corr.katcp_wrapper.FpgaClient('sdbe-1')
 roach2.wait_connected()
 print 'connected'
 
