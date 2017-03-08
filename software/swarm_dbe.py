@@ -159,7 +159,11 @@ ref_ep_date = datetime(utcnow.year,6*(utcnow.month>6)+1,1,0,0,0) # date of start
 #   W0
 ##############
 
-delta       = utcnow-ref_ep_date
+# wait until middle of second for calculation
+while(abs(datetime.utcnow().microsecond-5e5)>1e5):
+    sleep(0.1)
+
+delta       = datetime.utcnow()-ref_ep_date
 sec_ref_ep  = delta.seconds + 24*3600*delta.days
 
 # to check
