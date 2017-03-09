@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import swarm
 import numpy as np
 import matplotlib
