@@ -15,7 +15,7 @@ def nanmean(x,axis=0):
 # parse the user's command line arguments
 parser = argparse.ArgumentParser(description='sdbe histograms and autocorrs')
 parser.add_argument('-v', dest='verbose', action='store_true', help='display debugging logs')
-parser.add_argument('-t', dest='thresh', action='store_true', help='get current threshold value')
+#parser.add_argument('-t', dest='thresh', action='store_true', help='get current threshold value')
 parser.add_argument('-n', '--frames-to-check', dest='frames_to_check', default=-1, 
                     type=int, help='number of frames (from the beginning) to check (default: all)')
 parser.add_argument('-s', '--sample-rate', dest='sample_rate', default=3328.0, 
@@ -148,21 +148,21 @@ p_buff = 0.05
 ax_p = [[p_l,p_b+p_h+p_buff,p_w,p_h],[p_l,p_b,p_w,p_h]]
 
 chunks = ['Phase Sum Chunk 0','Phase Sum Chunk 1']
-if args.thresh:
-    thresh = [' old thresh: ',' new thresh: Tn, T0, Tp: ']
-    sdbe = corr.katcp_wrapper.FpgaClient('roach2-09')
-    sdbe.wait_connected()
-
-    th = sdbe.read_int('quantize_0_thresh')
-    th_used = (th >> 12) & 0x1
-    if th_used:
-        tn = (th & 0xf) - 16    
-        t0 = (th >> 4) & 0xf    
-        tp = (th >> 8) & 0xf    
-        chunks[1]=chunks[1]+', Daves Thresh (tn,t0,tp): ({0},{1},{2})'.format(tn,t0,tp)
-    else:
-        t = (th >> 1) & 0x7f     
-        chunks[1]=chunks[1]+', Old Thresh T: {0}'.format(t)
+#if args.thresh:
+#    thresh = [' old thresh: ',' new thresh: Tn, T0, Tp: ']
+#    sdbe = corr.katcp_wrapper.FpgaClient('roach2-09')
+#    sdbe.wait_connected()
+#
+#    th = sdbe.read_int('quantize_0_thresh')
+#    th_used = (th >> 12) & 0x1
+#    if th_used:
+#        tn = (th & 0xf) - 16    
+#        t0 = (th >> 4) & 0xf    
+#        tp = (th >> 8) & 0xf    
+#        chunks[1]=chunks[1]+', Daves Thresh (tn,t0,tp): ({0},{1},{2})'.format(tn,t0,tp)
+#    else:
+#        t = (th >> 1) & 0x7f     
+#        chunks[1]=chunks[1]+', Old Thresh T: {0}'.format(t)
 
 for p in range(2):
     y = ch_hist[:,p,:]
