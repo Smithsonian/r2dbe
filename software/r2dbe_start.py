@@ -164,24 +164,35 @@ roach2.write_int('r2dbe_onepps_ctrl', 1<<31)
 roach2.write_int('r2dbe_onepps_ctrl', 0)
 sleep(2)
 
-# set 10 gbe vals
+# get 10 gbe destination MAC & IP
+if len(iface0.split(',')) == 1:
+    mac_str0 = ni.ifaddresses(iface0)[17][0]['addr']
+    ip_str0 = ni.ifaddresses(iface0)[2][0]['addr']
+else:
+    mac_str0,ip_str0 = iface0.split(',')
+mac0 = int(mac_str0.translate(None,':'),16)
+ip0 = unpack('!I',inet_aton(ip_str0))[0]
 
-arp = [0xffffffffffff] * 256
-mac_eth0 = ni.ifaddresses(iface0)[17][0]['addr']
-mac_hex0  = int(mac_eth0.translate(None,':'),16)
-mac_eth1 = ni.ifaddresses(iface1)[17][0]['addr']
-mac_hex1  = int(mac_eth1.translate(None,':'),16)
+if len(iface1.split(',')) == 1:
+    mac_str1 = ni.ifaddresses(iface1)[17][0]['addr']
+    ip_str1 = ni.ifaddresses(iface1)[2][0]['addr']
+else:
+    mac_str1,ip_str1 = iface1.split(',')
+mac1 = int(mac_str1.translate(None,':'),16)
+ip1 = unpack('!I',inet_aton(ip_str1))[0]
 
-
-arp[3] = mac_hex0
-arp[5] = mac_hex1
-
-ip0 = unpack('!I',inet_aton(ni.ifaddresses(iface0)[2][0]['addr']))[0]
-ip1 = unpack('!I',inet_aton(ni.ifaddresses(iface1)[2][0]['addr']))[0]
+# populate ARP table
+arp = [0xFFFFFFFF] * 256
+arp[ip0 & 0xFF] = mac0
+if args.verbose > 2:
+    print "ARP entry {0}: {1:x}".format(ip_str0, mac0)
+arp[ip1 & 0xFF] = mac1
+if args.verbose > 2:
+    print "ARP entry {0}: {1:x}".format(ip_str1, mac1)
 
 for ii, ip, name in ((0, ip0, 'tengbe_0'), (1, ip1, 'tengbe_1')):
 
-    src_ip = (ip & 0xFFFFFF00) + (255 - ii - 1)
+    src_ip = (ip & 0xFFFFFF00) + 254
     src_mac = (2<<40) + (2<<32) + src_ip
     src_port = 4000
     dest_ip = ip
