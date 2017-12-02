@@ -55,9 +55,9 @@ _REC_CHAR_TO_FLAG = {
 
 _DEFAULT_CONFIG = {
     'if0':
-        {'station_id':'lh','pol':'1','bdc_sideband':'0','rec_sideband':'0'},
+        {'station_id':'lh','pol':'1','bdc_sideband':'0','rec_sideband':'0','iface':'eth3'},
     'if1':
-        {'station_id':'ll','pol':'1','bdc_sideband':'0','rec_sideband':'0'}
+        {'station_id':'ll','pol':'1','bdc_sideband':'0','rec_sideband':'0','iface':'eth5'}
 }
 
 config = _DEFAULT_CONFIG
@@ -68,7 +68,7 @@ if args.file is not None:
         if args.verbose > 1:
             print "reading configuration from file '{0}'".format(args.file)
         for sec in ['if0','if1']:
-            for key in ['station_id','pol','bdc_sideband','rec_sideband']:
+            for key in ['station_id','pol','bdc_sideband','rec_sideband','iface']:
                 try:
                     config[sec][key] = rcp.get(sec,key)
                 except (NoOptionError, NoSectionError) as e:
@@ -96,6 +96,10 @@ bdc_sb1 = _BDC_CHAR_TO_FLAG[config['if1']['bdc_sideband']]
 rec_sb0 = _REC_CHAR_TO_FLAG[config['if0']['rec_sideband']]
 rec_sb1 = _REC_CHAR_TO_FLAG[config['if1']['rec_sideband']]
 
+# set network interface
+iface0 = config['if0']['iface']
+iface1 = config['if1']['iface']
+
 # set thread id for both blocks
 # perhaps thread is always 0?
 thread_id_0 = 0
@@ -109,12 +113,14 @@ if args.verbose > 0:
     print "pol={0}".format(pol_block0)
     print "bdc_sideband={0}".format(bdc_sb0)
     print "rec_sideband={0}".format(rec_sb0)
+    print "iface={0}".format(iface0)
     print ""
     print "[if1]"
     print "station_id={0}".format(station_id_1)
     print "pol={0}".format(pol_block1)
     print "bdc_sideband={0}".format(bdc_sb1)
     print "rec_sideband={0}".format(rec_sb1)
+    print "iface={0}".format(iface1)
     print ""
     print "########################### {0} ###########################".format(args.host)
 
@@ -161,31 +167,21 @@ sleep(2)
 # set 10 gbe vals
 
 arp = [0xffffffffffff] * 256
-mac_eth3 = ni.ifaddresses('eth3')[17][0]['addr']
-mac_hex3  = int(mac_eth3.translate(None,':'),16)
-mac_eth5 = ni.ifaddresses('eth5')[17][0]['addr']
-mac_hex5  = int(mac_eth5.translate(None,':'),16)
+mac_eth0 = ni.ifaddresses(iface0)[17][0]['addr']
+mac_hex0  = int(mac_eth0.translate(None,':'),16)
+mac_eth1 = ni.ifaddresses(iface1)[17][0]['addr']
+mac_hex1  = int(mac_eth1.translate(None,':'),16)
 
 
-arp[3] = mac_hex3
-arp[5] = mac_hex5
+arp[3] = mac_hex0
+arp[5] = mac_hex1
 
-# can be entered manually
-#arp[3] = 0x0060dd448941 # mac address of mark6-4015 eth3
-#arp[5] = 0x0060dd44893b # mac address of mark6-4015 eth5
-
-ip = ni.ifaddresses('eth3')[2][0]['addr']
+ip = ni.ifaddresses(iface0)[2][0]['addr']
 ipb = [x for x in map(str.strip, ip.split('.'))]
 
 ip_b3 = int(ipb[0])
 ip_b2 = int(ipb[1])
 ip_b0 = int(ipb[3])
-
-
-# can be entered manually
-#ip_b3 = 172
-#ip_b2 = 16
-#ip_b0 = 15 #should be last 2 digits of name: Mark6-40**
 
 for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
 
