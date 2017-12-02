@@ -2,8 +2,8 @@ import adc5g, corr
 from time import sleep
 from datetime import datetime, time, timedelta
 import netifaces as ni
-from socket import inet_ntoa
-from struct import pack
+from socket import inet_ntoa, inet_aton
+from struct import pack, unpack
 import subprocess
 import sys
 
@@ -176,19 +176,15 @@ mac_hex1  = int(mac_eth1.translate(None,':'),16)
 arp[3] = mac_hex0
 arp[5] = mac_hex1
 
-ip = ni.ifaddresses(iface0)[2][0]['addr']
-ipb = [x for x in map(str.strip, ip.split('.'))]
+ip0 = unpack('!I',inet_aton(ni.ifaddresses(iface0)[2][0]['addr']))[0]
+ip1 = unpack('!I',inet_aton(ni.ifaddresses(iface1)[2][0]['addr']))[0]
 
-ip_b3 = int(ipb[0])
-ip_b2 = int(ipb[1])
-ip_b0 = int(ipb[3])
+for ii, ip, name in ((0, ip0, 'tengbe_0'), (1, ip1, 'tengbe_1')):
 
-for i, name in ((3, 'tengbe_0'), (5, 'tengbe_1')):
-
-    src_ip  = (ip_b3<<24) + (ip_b2<<16) + ((i*10)<<8) + ip_b0
-    src_mac = (2<<40) + (2<<32) + 20 + src_ip
+    src_ip = (ip & 0xFFFFFF00) + (255 - ii - 1)
+    src_mac = (2<<40) + (2<<32) + src_ip
     src_port = 4000
-    dest_ip = (ip_b3<<24) + (ip_b2<<16) + (i<<8) + ip_b0
+    dest_ip = ip
     dest_port = 4001
 
     roach2.config_10gbe_core('r2dbe_' + name + '_core', src_mac, src_ip, src_port, arp)
