@@ -1,118 +1,80 @@
+import logging
+
 from ConfigParser import RawConfigParser
+from threading import Thread
 
-from defines import *
-from remote import remote_python
+from config import *
+from mark6 import Mark6
+from primitives import IFSignal, SignalPath, EthRoute, ModSubGroup
+from r2dbe import R2DBE_INPUTS, R2DBE_NUM_INPUTS, R2dbe
 
-PYTHON_IP_ADDRESS = \
-"from netifaces import ifaddresses\n\
-iface=ifaddresses('%s')\n\
-print iface[2][0]['addr']"
-
-PYTHON_MAC_ADDRESS = \
-"from netifaces import ifaddresses\n\
-iface=ifaddresses('%s')\n\
-print iface[17][0]['addr']"
-
-PYTHON_MACIP_ADDRESS = \
-"from netifaces import ifaddresses\n\
-iface=ifaddresses('%s')\n\
-print iface[17][0]['addr'], ',', iface[2][0]['addr']"
-
-
-def get_iface_macip_str(iface,host,user=None):
-	mac_str,ip_str = remote_python(PYTHON_MACIP_ADDRESS%iface,host,user=user).split(',')
-	return mac_str.strip(), ip_str.strip()
-
-class SignalPath(object):
-
-	def __init__(self,name,stn,pol="0",rx="0",bdc="0",iface="eth3",mods="12"):
-		self.name = name
-		self.station = stn
-		self.pol = pol
-		self.rec_sideband = rx
-		self.bdc_sideband = bdc
-		self.iface = iface
-		self.modules = mods
-
-	@classmethod
-	def from_config_backend_option_if(cls,name,stn,lst):
-		return cls(name,stn,**dict(zip(CONFIG_BACKEND_INPUT_ORDER,lst)))
-
-	def set_iface_macip(self,host,user=None):
-		mac,ip = get_iface_macip_str(self.iface,host,user=user)
-		self.mac = mac
-		self.ip = ip
-
-	def to_config(self,rcp_init=None):
-		rcp = rcp_init
-		if rcp is None:
-			rcp = RawConfigParser()
-		sec = self.name
-		rcp.add_section(sec)
-		rcp.set(sec,'station_id',self.station)
-		rcp.set(sec,'pol',self.pol)
-		rcp.set(sec,'rec_sideband',self.rec_sideband)
-		rcp.set(sec,'bdc_sideband',self.bdc_sideband)
-		if hasattr(self,'mac') and hasattr(self,'ip'):
-			rcp.set(sec,'iface','%s,%s'%(self.mac,self.ip))
-		else:
-			rcp.set(sec,'iface',self.iface)
-		rcp.set(sec,'modules',self.modules)
-		return rcp
+module_logger = logging.getLogger(__name__)
 
 class Backend(object):
 
-	def __init__(self,name,station,r2dbe,mark6,if0,if1):
+	def __init__(self, name, station, r2dbe=None, mark6=None, signal_paths=[SignalPath], parent_logger=module_logger):
 		self.name = name
 		self.station = station
 		self.r2dbe = r2dbe
 		self.mark6 = mark6
-		self.if0 = SignalPath.from_config_backend_option_if('if0',
-		   station,if0.split(','))
-		self.if0.set_iface_macip(self.mark6)
-		self.if1 = SignalPath.from_config_backend_option_if('if1',
-		  station,if1.split(','))
-		self.if1.set_iface_macip(self.mark6)
+		self.signal_paths = signal_paths
+		self.logger = logging.getLogger("{name}[name={be}]".format(name=".".join((parent_logger.name, 
+		  self.__class__.__name__)), be=self.name))
+		self.logger.info("Instantiated backend with (r2dbe={r2dbe}; mark6={mark6})".format(name=self.name,
+		  r2dbe=self.r2dbe.roach2_host, mark6=self.mark6.host))
 
 	@classmethod
-	def from_config_backend_section(cls,sec,stn,opts):
-		return cls(sec,stn,opts['r2dbe'],opts['mark6'],
-		  opts['if0'],opts['if1'])
+	def from_dict(cls, name, station, options):
+		r2dbe = R2dbe(options[BACKEND_OPTION_R2DBE])
+		mark6 = Mark6(options[BACKEND_OPTION_MARK6])
+		signal_paths = [None]*R2DBE_NUM_INPUTS
+		for input_n in R2DBE_INPUTS:
+			# Analog input
+			pol = options[BACKEND_OPTION_POLARIZATION % input_n]
+			rx_sb = options[BACKEND_OPTION_RECEIVER_SIDEBAND % input_n]
+			bdc_sb = options[BACKEND_OPTION_BLOCKDOWNCONVERTER_SIDEBAND % input_n]
+			ifs = IFSignal(receiver_sideband=rx_sb, blockdownconverter_sideband=bdc_sb, polarization=pol)
+			# Ethernet routing
+			mk6_iface_name = options[BACKEND_OPTION_IFACE % input_n]
+			mac, ip = mark6.get_iface_mac_ip(mk6_iface_name)
+			eth_rt = R2dbe.make_default_route_from_destination(mac, ip)
+			# Module
+			mods = ModSubGroup(options[BACKEND_OPTION_MODULES % input_n])
+			# Create signal path
+			signal_paths[input_n] = SignalPath(if_signal=ifs, eth_route=eth_rt, mod_subgroup=mods)
 
-	def to_config(self,rcp_init=None):
-		rcp = rcp_init
-		if rcp is None:
-			rcp = RawConfigParser()
-		for sp in ('if0','if1'):
-			if hasattr(self,sp):
-				rcp = getattr(self,sp).to_config(rcp_init=rcp)
-		return rcp
+		return cls(name, station, r2dbe=r2dbe, mark6=mark6, signal_paths=signal_paths)
 
-	def to_file(self,filename=None):
-		if filename is None:
-			filename = "%s.conf"%self.name
-		rcp = self.to_config()
-		with open(filename,"w") as fh:
-			fh.write("# Configuration file for %s backend %s\n"%(self.station,self.name))
-			fh.write("# R2DBE: %s\n"%self.r2dbe)
-			fh.write("# Mark6: %s\n"%self.mark6)
-			rcp.write(fh)
+	def setup(self):
+		self.r2dbe.setup(self.station, [sp.ifs for sp in self.signal_paths], [sp.ethrt for sp in self.signal_paths])
+		self.mark6.setup()
 
 class Station(object):
 
-	def __init__(self,name,backends):
-		self.name = name
+	def __init__(self, station, backends, parent_logger=module_logger):
+		self.station = station
 		self.backends = backends
+		self.logger = logging.getLogger("{name}[station={station}]".format(name=".".join((parent_logger.name, 
+		  self.__class__.__name__)), station=self.station))
+		self.logger.info("Configured station with backends [{be_list}]".format(
+		  station=self.station, be_list=", ".join(["{be!r}".format(be=be) for be in self.backends.keys()])))
 
 	@classmethod
-	def from_config_file(cls,filename):
+	def from_file(cls, filename):
 		rcp = RawConfigParser()
 		if len(rcp.read(filename)) < 1:
-			raise RuntimeError("Unable to read station configuration from file '%s'"%filename)
-		name = rcp.get(CONFIG_SECTION_GLOBAL,CONFIG_GLOBAL_OPTION_STATION)
-		backend_list = rcp.get(CONFIG_SECTION_GLOBAL,CONFIG_GLOBAL_OPTION_BACKENDS).split(',')
+			module_logger.error("Unable to parse station configuration file '{0}'".format(filename))
+			return
+		station = rcp.get(GLOBAL_SECTION, GLOBAL_OPTION_STATION)
+		backend_list = rcp.get(GLOBAL_SECTION, GLOBAL_OPTION_BACKENDS).split(",")
 		backends = {}
 		for be in backend_list:
-			opts = dict(rcp.items(be))
-			backends[be] = Backend.from_config_backend_section(be,name,opts)
-		return cls(name,backends)
+			options = dict(rcp.items(be))
+			backends[be] = Backend.from_dict(be, station, options)
+
+		return cls(station, backends)
+
+	def setup(self):
+		threads = [Thread(target=be.setup) for be in zip(*self.backends.items())[1]]
+		[th.start() for th in threads]
+		[th.join() for th in threads]
