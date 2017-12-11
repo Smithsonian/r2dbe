@@ -1,5 +1,5 @@
 ############################################################### Firmware
-R2DBE_DEFAULT_BITCODE = "r2dbe_rev2.bof"
+R2DBE_DEFAULT_BITCODE = "r2dbe_rev2_v1.1.bof"
 R2DBE_LATEST_VERSION_GIT_HASH = "32aae4d"
 
 ######################################################### Time reference
