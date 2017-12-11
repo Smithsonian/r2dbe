@@ -49,7 +49,7 @@ class SignalPath(object):
 			rcp = RawConfigParser()
 		sec = self.name
 		rcp.add_section(sec)
-		rcp.set(sec,'station',self.station)
+		rcp.set(sec,'station_id',self.station)
 		rcp.set(sec,'pol',self.pol)
 		rcp.set(sec,'rec_sideband',self.rec_sideband)
 		rcp.set(sec,'bdc_sideband',self.bdc_sideband)
