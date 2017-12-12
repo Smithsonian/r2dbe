@@ -2,6 +2,7 @@ from base import (
 	Sideband,
 	RxSideband,
 	BDCSideband,
+        Polarization,
 	IFSignal,
 	MACAddress,
 	IPAddress,
