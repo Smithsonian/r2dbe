@@ -41,7 +41,12 @@ class Roach2(object):
 			raise RuntimeError("Timeout trying to connect to {0}. Is it up and running?".format(self.roach2.host))
 
 	def _program(self, bitcode):
-		self.roach2.progdev(bitcode)
+		try:
+			self.roach2.progdev(bitcode)
+		except RuntimeError as re:
+			self.logger.critical("Failed to program {roach2!r} with bitcode {code!r}. Is the BOF file installed?".format(
+			  roach2=self.roach2_host, code=bitcode))
+			raise re
 		return format_bitcode_version(self.roach2.get_rcs())
 
 	def _read_int(self, name):
