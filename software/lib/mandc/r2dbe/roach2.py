@@ -12,7 +12,7 @@ from corr.katcp_wrapper import FpgaClient
 import adc
 from ..primitives.base import IFSignal, EthEntity, EthRoute, IPAddress, MACAddress, Port
 from defines import *
-from vdif import VDIFTime
+from ..data import VDIFTime
 
 module_logger = logging.getLogger(__name__)
 
