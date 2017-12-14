@@ -2,10 +2,13 @@ import logging
 
 import json
 from subprocess import Popen, PIPE
+from struct import pack
 from tempfile import NamedTemporaryFile
 
 from ..primitives.base import IPAddress, MACAddress
 from defines import *
+from ..data import VDIFFrame
+from ..r2dbe import R2DBE_VTP_SIZE, R2DBE_VDIF_SIZE
 
 module_logger = logging.getLogger(__name__)
 
@@ -90,6 +93,27 @@ class Mark6(object):
 	def _system_call(self, cmd):
 		ssh_cmd = "ssh {user}@{host} {cmd}".format(user=self.user, host=self.host, cmd=cmd)
 		return _system_call(ssh_cmd)
+
+	def capture_vdif(self, iface, port, timeout=3.0, vtp_bytes=R2DBE_VTP_SIZE, vdif_bytes=R2DBE_VDIF_SIZE):
+		vdifsize = vtp_bytes + vdif_bytes
+		code_str = "" \
+		  "from netifaces import ifaddresses\n" \
+		  "from socket import socket, AF_INET, SOCK_DGRAM\n" \
+		  "iface = ifaddresses('{iface}')\n" \
+		  "sock_addr = (iface[2][0]['addr'], {portno})\n" \
+		  "sock = socket(AF_INET, SOCK_DGRAM)\n" \
+		  "sock.settimeout({timeout})\n" \
+		  "sock.bind(sock_addr)\n" \
+		  "data, addr = sock.recvfrom({vdifsize})\n" \
+		  "data = [ord(d) for d in data]\n".format(iface=iface, portno=port, timeout=timeout, vdifsize=vdifsize)
+
+		# Get call result
+		res, rv = self._safe_python_call(code_str, "data")
+
+		if res:
+			data = rv["data"][vtp_bytes:]
+			bin_data = pack("<%dB" % vdif_bytes, *data)
+			return VDIFFrame.from_bin(bin_data)
 
 	def get_iface_mac_ip(self, iface):
 		code_str = "" \
