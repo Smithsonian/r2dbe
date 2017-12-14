@@ -43,6 +43,9 @@ R2DBE_TENGBE_DEST_PORT = "r2dbe_tengbe_%d_dest_port"
 R2DBE_TENGBE_RESET = "r2dbe_tengbe_%d_rst"    
 
 ###################################################### R2DBE VDIF header
+# VDIF transmission
+R2DBE_VTP_SIZE = 8
+R2DBE_VDIF_SIZE = 8224
 # Misc parameters
 R2DBE_VDIF_EUD_VERSION = 0x02
 R2DBE_VDIF_DEFAULT_THREAD_ID_0 = 0
