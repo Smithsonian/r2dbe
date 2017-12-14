@@ -1,5 +1,6 @@
 import logging
 
+import json
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
 
@@ -64,17 +65,46 @@ class Mark6(object):
 
 			return stdout
 
+	def _safe_python_call(self, py_code, *args):
+		# Execute Python source and return variables using json.dumps()
+		wrapper_code = "" \
+		  "try:\n" \
+		  "    import json\n" \
+		  "    {code}\n" \
+		  "    print json.dumps((True, ({rvar})))\n" \
+		  "except Exception as ex:\n" \
+		  "    print json.dumps((False, (str(ex.__class__), str(ex))))\n".format(code="\n    ".join(py_code.split("\n")),
+		  rvar=" ".join(["{0},".format(a) for a in args]))
+		rstr = self._python_call(wrapper_code)
+		res, rv = json.loads(rstr)
+
+		# Log possible error
+		if not res:
+			ex_name = rv[0]
+			ex_msg = rv[1]
+			self.logger.error("A {name} exception occurred during Python call: {msg}".format(name=ex_name, msg=ex_msg))
+
+		# Then return the result and return value
+		return res, dict(zip(args,[r for r in rv]))
+
 	def _system_call(self, cmd):
 		ssh_cmd = "ssh {user}@{host} {cmd}".format(user=self.user, host=self.host, cmd=cmd)
 		return _system_call(ssh_cmd)
 
 	def get_iface_mac_ip(self, iface):
-		rstr = self._python_call(""
-		  "from netifaces import ifaddresses\n"
-		  "iface=ifaddresses('{iface}')\n"
-		  "print iface[17][0]['addr'], ',', iface[2][0]['addr']".format(iface=iface))
-		mac_str, ip_str = rstr.split(",")
-		return MACAddress(mac_str), IPAddress(ip_str)
+		code_str = "" \
+		  "from netifaces import ifaddresses\n" \
+		  "iface = ifaddresses('{iface}')\n" \
+		  "mac = iface[17][0]['addr']\n" \
+		  "ip = iface[2][0]['addr']".format(iface=iface)
+
+		# Get call result
+		res, rv = self._safe_python_call(code_str, "mac", "ip")
+
+		if res:
+			mac_str = str(rv["mac"])
+			ip_str = str(rv["ip"])
+			return MACAddress(mac_str), IPAddress(ip_str)
 
 	def get_module_status(self, mod_n):
 		return self._daclient_call("mstat", str(mod_n))
