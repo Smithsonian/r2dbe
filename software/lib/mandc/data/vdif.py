@@ -53,6 +53,10 @@ class VDIFTime(object):
 
 		return cls(epoch, sec, frame=frame, frame_rate=frame_rate)
 
+	@classmethod
+	def from_vdif(cls, v, frame_rate=DEFAULT_FRAME_RATE):
+		return cls(v.ref_epoch, v.secs_since_epoch, v.data_frame, frame_rate=frame_rate)
+
 	def __repr__(self):
 		return "{0}@{1}+{2}".format(self.epoch, self.sec, self.frame)
 
