@@ -1,13 +1,14 @@
 import logging
 
 from datetime import datetime, timedelta
-from numpy import arange, array, nonzero, sqrt, roll, uint32, uint64
+from numpy import arange, array, count_nonzero, int8, nonzero, sqrt, roll, uint32, uint64, zeros
 from struct import pack, unpack
 from time import ctime, sleep
 
 import adc5g
 
 from corr.katcp_wrapper import FpgaClient
+from corr.snap import snapshots_get
 
 import adc
 from ..primitives.base import IFSignal, EthEntity, EthRoute, IPAddress, MACAddress, Port
@@ -27,10 +28,14 @@ def format_bitcode_version(rcs):
 
 class Roach2(object):
 
-	def __init__(self, roach2_host, parent_logger=module_logger):
+	def __init__(self, roach2_host, parent_logger=module_logger, retry_snaps=3):
 		self.roach2_host = roach2_host
 		self.logger = logging.getLogger("{name}[host={host!r}]".format(name=".".join((parent_logger.name, 
 		  self.__class__.__name__)), host=self.roach2_host,))
+
+		# Set number of retries in case snapshot read fails
+		self._retry_snaps = retry_snaps
+
 		# connect to ROACH2
 		if self.roach2_host:
 			self._connect()
@@ -57,6 +62,21 @@ class Roach2(object):
 	def _write_int(self, name, value):
 		self.roach2.write_int(name, value)
 		self.logger.debug("write_int: {0} <-- 0x{1:08x}".format(name, value))
+
+	def _read_snap(self, names):
+		tries = 0
+		while True:
+			try:
+				snaps = snapshots_get([self.roach2] * len(names), names)
+				return snaps
+			except RuntimeError as runtime_error:
+				self.logger.error(
+				  "Caught exception while attempting to read snapshots {names}, retrying ({more} tries left)".format(
+				  names=names, more=self._retry_snaps-tries))
+				tries += 1
+				if tries >= self._retry_snaps:
+					self.logger.critical("Could not read snapshot, exiting")
+					raise runtime_error
 
 class R2dbe(Roach2):
 
@@ -134,6 +154,34 @@ class R2dbe(Roach2):
 		offset = abs_time - alive
 
 		return sec + offset
+
+	def _unpack_2bit_data(self, data):
+		# Interpret data as array of uint32
+		N_bytes = len(data)
+		N_uint32 = N_bytes / 4
+		uint32_data = array(unpack(">%dI" % N_uint32, data), dtype=uint32)
+
+		# Extract uint2 from uint32
+		N_int2 = N_bytes * 4
+		uint2_data = zeros(N_int2, dtype=int8)
+		bits_per_sample = 2
+		samples_per_word = 16
+		sample_max = 2**bits_per_sample - 1
+		for ii in range(samples_per_word):
+			shift_by = 30 - bits_per_sample * ii
+			uint2_data[ii::samples_per_word] = (uint32_data >> shift_by) & sample_max
+
+		# Convert offset binary to signed
+		int2_data = uint2_data - 2**(bits_per_sample - 1)
+
+		return int2_data
+
+	def _unpack_8bit_data(self, data):
+		# Interpret data as array of int8
+		N_bytes = len(data)
+		int8_data = array(unpack(">%db" % N_bytes, data), dtype=int8)
+
+		return int8_data
 
 	@classmethod
 	def make_default_route_from_destination(cls, dst_mac, dst_ip, dst_port=Port(4001)):
@@ -331,6 +379,129 @@ class R2dbe(Roach2):
 		# Wait until at least one full second has passed
 		sleep(2)
 
+	def get_2bit_and_8bit_snapshot(self, input_n):
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+
+		# Get snapshots
+		snap_names = []
+		snap_names_2bit = [R2DBE_DATA_SNAPSHOT_2BIT % ii for ii in input_n]
+		snap_names.extend(snap_names_2bit)
+		snap_names_8bit = [R2DBE_DATA_SNAPSHOT_8BIT % ii for ii in input_n]
+		snap_names.extend(snap_names_8bit)
+		snaps = self._read_snap(snap_names)
+
+		# Get 2-bit samples
+		data_2bit = [snaps["data"][snap_names.index(name_2bit)] for name_2bit in snap_names_2bit]
+		samples_2bit = [self._unpack_2bit_data(data) for data in data_2bit]
+
+		# Get 8-bit samples
+		data_8bit = [snaps["data"][snap_names.index(name_8bit)] for name_8bit in snap_names_8bit]
+		samples_8bit = [self._unpack_8bit_data(data) for data in data_8bit]
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			samples_2bit = samples_2bit[0]
+			samples_8bit = samples_8bit[0]
+
+		return samples_2bit, samples_8bit
+
+	def get_2bit_snapshot(self, input_n):
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+
+		# Get snapshots
+		snaps = self._read_snap([R2DBE_DATA_SNAPSHOT_2BIT % ii for ii in input_n])
+
+		# Unpack into 2-bit samples
+		samples = [self._unpack_2bit_data(data) for data in snaps['data']]
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			samples = samples[0]
+
+		return samples
+
+	def get_2bit_state_counts(self, input_n, reuse_samples=None):
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+			reuse_samples = [reuse_samples]
+
+		# Optionally use provided sample data
+		samples = reuse_samples
+		if any([s is None for s in samples]):
+			samples = self.get_2bit_snapshot(input_n)
+
+		# Count the number of samples in each state
+		all_states = range(-2, 2)
+		state_counts = list(zeros((len(input_n), len(all_states)), dtype=uint32))
+		for ii, inp in enumerate(input_n):
+			for jj, state in enumerate(all_states):
+				state_counts[ii][jj] = count_nonzero(samples[ii] == state)
+
+		# Make a list of state values
+		state_values = [array(all_states, dtype=int8) for _ in state_counts]
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			state_counts = state_counts[0]
+			state_values = state_values[0]
+
+		return state_counts, state_values
+
+	def get_2bit_threshold(self, input_n):
+		return self._read_int(R2DBE_QUANTIZATION_THRESHOLD % input_n)
+
+	def get_8bit_snapshot(self, input_n):
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+
+		# Get snapshots
+		snaps = self._read_snap([R2DBE_DATA_SNAPSHOT_8BIT % ii for ii in input_n])
+
+		# Unpack into 8-bit samples
+		samples = [self._unpack_8bit_data(data) for data in snaps['data']]
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			samples = samples[0]
+
+		return samples
+
+	def get_8bit_state_counts(self, input_n):
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+
+		# Count the number of samples in each state
+		state_counts = []
+		state_values = []
+		for inp in input_n:
+			sec, cnt, val = self._dump_8bit_counts_buffer(inp)
+			# Select only second-to-last entry, and sum over all ADC cores
+			state_counts.append(cnt[sec.argmax()-1, :, :].sum(axis=0))
+			state_values.append(val)
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			state_counts = state_counts[0]
+			state_values = state_values[0]
+
+		return state_counts, state_values
 	def get_input(self, input_n):
 		return self._inputs[input_n]
 
