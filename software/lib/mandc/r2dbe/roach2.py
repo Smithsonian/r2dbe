@@ -92,7 +92,7 @@ class R2dbe(Roach2):
 		repr_str = "{name}"#[\n  {inputs[0]!r} : {outputs[0]!r}\n  {inputs[1]!r} : {outputs[1]!r}\n]"
 		return repr_str.format(name=self.roach2_host, inputs=self._inputs, outputs=self._outputs)
 
-	def _dump_counts_buffer(self, input_n):
+	def _dump_8bit_counts_buffer(self, input_n):
 		# Read buffer and interpret
 		raw_bin = self.roach2.read(R2DBE_COUNTS_BUFFER % input_n, R2DBE_COUNTS_BUFFER_NMEM * R2DBE_COUNTS_BUFFER_SIZET)
 		raw_int = array(unpack(R2DBE_COUNTS_BUFFER_FMT % R2DBE_COUNTS_BUFFER_NMEM, raw_bin), dtype=uint64)
@@ -119,9 +119,9 @@ class R2dbe(Roach2):
 
 		return sec, cnt, val
 
-	def _dump_counts_mean_variance(self, input_n):
+	def _dump_8bit_counts_mean_variance(self, input_n):
 		# Get counts
-		sec, cnt, val = self._dump_counts_buffer(input_n)
+		sec, cnt, val = self._dump_8bit_counts_buffer(input_n)
 
 		# Reshape val for proper broadcasting
 		val = val.reshape((1, 1, -1))
@@ -224,7 +224,7 @@ class R2dbe(Roach2):
 		sleep(3)
 
 		# Get reset standard deviations
-		sec, _, variances = self._dump_counts_mean_variance(input_n)
+		sec, _, variances = self._dump_8bit_counts_mean_variance(input_n)
 		std_0 = sqrt(variances[sec.argmax()-1, :])
 		self.logger.debug("Initial ADC{0} standard deviations are [{1}]".format(input_n,
 		  ", ".join(["{0:+.3f}".format(s) for s in std_0])))
@@ -253,7 +253,7 @@ class R2dbe(Roach2):
 			sleep(3)
 
 			# Measure new standard deviations
-			sec, _, variances = self._dump_counts_mean_variance(input_n)
+			sec, _, variances = self._dump_8bit_counts_mean_variance(input_n)
 			std_u = sqrt(variances[sec.argmax()-1, :])
 			self.logger.debug("Updated standard deviations for ADC{0} are [{1}]".format(input_n,
 			  ", ".join(["{0:+.3f}".format(s) for s in std_u])))
@@ -305,7 +305,7 @@ class R2dbe(Roach2):
 		sleep(3)
 
 		# Get reset mean
-		sec, means, _ = self._dump_counts_mean_variance(input_n)
+		sec, means, _ = self._dump_8bit_counts_mean_variance(input_n)
 		mean_0 = means[sec.argmax()-1, :]
 		self.logger.debug("Initial ADC{0} means are [{1}]".format(input_n,
 		  ", ".join(["{0:+.3f}".format(m) for m in mean_0])))
@@ -331,7 +331,7 @@ class R2dbe(Roach2):
 			sleep(3)
 
 			# Measure new means
-			sec, means, _ = self._dump_counts_mean_variance(input_n)
+			sec, means, _ = self._dump_8bit_counts_mean_variance(input_n)
 			mean_u = means[sec.argmax()-1, :]
 			self.logger.debug("Updated means for ADC{0} are [{1}]".format(input_n,
 			  ", ".join(["{0:+.3f}".format(m) for m in mean_u])))
@@ -530,7 +530,7 @@ class R2dbe(Roach2):
 			sleep(wait)
 
 			# Read counts
-			sec, cnt, val = self._dump_counts_buffer(input_n)
+			sec, cnt, val = self._dump_8bit_counts_buffer(input_n)
 
 			# Use only data from second-to-last entry, and sum over cores
 			cnt_1sec = cnt[sec.argmax()-1,:,:].sum(axis=0)
