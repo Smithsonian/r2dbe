@@ -507,7 +507,25 @@ class R2dbe(Roach2):
 		return self._read_int(R2DBE_ONEPPS_GPS_PPS_COUNT)
 
 	def get_input(self, input_n):
-		return self._inputs[input_n]
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+
+		inp = []
+		for inp_n in input_n:
+			w4 = self._read_int(R2DBE_VDIF_HDR_W4 % inp_n)
+			rx_sb_spec = (w4 & 0x04) >> 2
+			bdc_sb_spec = (w4 & 0x02) >> 1
+			pol_spec = w4 & 0x01
+			inp.append(IFSignal(rx_sb_spec, bdc_sb_spec, pol_spec))
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			inp = inp[0]
+
+		return inp
 
 	def get_input_data_source(self, input_n):
 		return self._read_int(R2DBE_INPUT_DATA_SELECT % input_n)
@@ -521,9 +539,22 @@ class R2dbe(Roach2):
 	def get_gps_pps_time_offset(self):
 		return self.get_gps_pps_clock_offset() / R2DBE_CLOCK_RATE
 
+	def get_station_id(self, output_n):
+		# If output specifier not a list, make it a 1-element list
+		list_output = True
+		if not isinstance(output_n, list):
+			list_output = False
+			output_n = list((output_n,))
 
-	def get_pps_time_offset(self):
-		return self.get_pps_clock_offset() / R2DBE_CLOCK_RATE
+		st = []
+		for outp_n in output_n:
+			st.append("".join([chr((self._read_int(R2DBE_VDIF_STATION_ID % outp_n) >> ss) & 0xFF) for ss in [8, 0]]))
+
+		# If output specifier not a list, revert to non-list result
+		if not list_output:
+			st = st[0]
+
+		return st
 
 	def get_time(self, output_n=0):
 		sec = self._read_int(R2DBE_ONEPPS_SINCE_EPOCH)
