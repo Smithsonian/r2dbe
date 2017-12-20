@@ -502,6 +502,10 @@ class R2dbe(Roach2):
 			state_values = state_values[0]
 
 		return state_counts, state_values
+
+	def get_gps_pps_count(self):
+		return self._read_int(R2DBE_ONEPPS_GPS_PPS_COUNT)
+
 	def get_input(self, input_n):
 		return self._inputs[input_n]
 
@@ -511,8 +515,12 @@ class R2dbe(Roach2):
 	def get_output(self, output_n):
 		return self._outputs[output_n]
 
-	def get_pps_clock_offset(self):
-		return self._read_int("r2dbe_onepps_offset")
+	def get_gps_pps_clock_offset(self):
+		return self._read_int(R2DBE_ONEPPS_GPS_OFFSET)
+
+	def get_gps_pps_time_offset(self):
+		return self.get_gps_pps_clock_offset() / R2DBE_CLOCK_RATE
+
 
 	def get_pps_time_offset(self):
 		return self.get_pps_clock_offset() / R2DBE_CLOCK_RATE
@@ -522,6 +530,11 @@ class R2dbe(Roach2):
 		ep = self._read_int(R2DBE_VDIF_REF_EPOCH % output_n)
 
 		return VDIFTime(ep, sec).to_datetime()
+
+	def get_up_time(self):
+		alive = self._read_int(R2DBE_ONEPPS_ALIVE)
+
+		return alive
 
 	def set_2bit_threshold(self, input_n, threshold=None, outer_bin_frac=0.16, wait=0):
 		# If threshold is not specified, compute it

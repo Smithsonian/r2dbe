@@ -13,6 +13,8 @@ R2DBE_FRAME_RATE = R2DBE_SAMPLE_RATE / R2DBE_SAMPLES_PER_FRAME
 R2DBE_ONEPPS_CTRL = "r2dbe_onepps_ctrl"
 R2DBE_ONEPPS_ALIVE = "r2dbe_onepps_alive"
 R2DBE_ONEPPS_SINCE_EPOCH = "r2dbe_onepps_since_epoch"
+R2DBE_ONEPPS_GPS_PPS_COUNT = "r2dbe_onepps_gps_pps_cnt"
+R2DBE_ONEPPS_GPS_OFFSET = "r2dbe_onepps_offset"
 
 ########################################################## Analog inputs
 # Misc paramaters
