@@ -89,7 +89,7 @@ class R2dbe(Roach2):
 		self._outputs = [EthRoute(parent_logger=self.logger), ] * R2DBE_NUM_OUTPUTS
 
 	def __repr__(self):
-		repr_str = "{name}[\n  {inputs[0]!r} : {outputs[0]!r}\n  {inputs[1]!r} : {outputs[1]!r}\n]"
+		repr_str = "{name}"#[\n  {inputs[0]!r} : {outputs[0]!r}\n  {inputs[1]!r} : {outputs[1]!r}\n]"
 		return repr_str.format(name=self.roach2_host, inputs=self._inputs, outputs=self._outputs)
 
 	def _dump_counts_buffer(self, input_n):
