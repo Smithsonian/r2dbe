@@ -459,7 +459,19 @@ class R2dbe(Roach2):
 		return state_counts, state_values
 
 	def get_2bit_threshold(self, input_n):
-		return self._read_int(R2DBE_QUANTIZATION_THRESHOLD % input_n)
+		# If input specifier not a list, make it a 1-element list
+		list_input = True
+		if not isinstance(input_n, list):
+			list_input = False
+			input_n = list((input_n,))
+
+		th = [self._read_int(R2DBE_QUANTIZATION_THRESHOLD % inp_n) & 0x7F for inp_n in input_n]
+
+		# If input specifier not a list, revert to non-list result
+		if not list_input:
+			th = th[0]
+
+		return th
 
 	def get_8bit_snapshot(self, input_n):
 		# If input specifier not a list, make it a 1-element list
