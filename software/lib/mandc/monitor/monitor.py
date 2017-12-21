@@ -285,10 +285,10 @@ class R2dbeMonitor(Thread):
 			# Receiver sideband
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_RECEIVER_SIDEBAND,
 			  arg=R2DBE_ARG_VDIF_RECEIVER_SIDEBAND % inp)
-			keys_values[key] = encode_attribute_data(str(inputs[ii].pol))
+			keys_values[key] = encode_attribute_data(str(inputs[ii].rx_sb))
 			# BDC sideband
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_BDC_SIDEBAND, arg=R2DBE_ARG_VDIF_BDC_SIDEBAND % inp)
-			keys_values[key] = encode_attribute_data(str(inputs[ii].pol))
+			keys_values[key] = encode_attribute_data(str(inputs[ii].bdc_sb))
 			# Polarization
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_POLARIZATION, arg=R2DBE_ARG_VDIF_POLARIZATION % inp)
 			keys_values[key] = encode_attribute_data(str(inputs[ii].pol))
