@@ -587,7 +587,7 @@ class R2dbe(Roach2):
 			th_neg = val[nonzero(cdf_1sec > outer_bin_frac)[0][0]]
 			threshold = int(round((abs(th_pos) + abs(th_neg))/2.0))
 
-		self._write_int(R2DBE_QUANTIZATION_TREHSHOLD % input_n, threshold)
+		self._write_int(R2DBE_QUANTIZATION_THRESHOLD % input_n, threshold)
 		self.logger.debug("Set 2-bit quantization threshold for input {0} to {1} (pos {2:+}, neg {3:+})".format(
 		  input_n, threshold, th_pos, th_neg))
 

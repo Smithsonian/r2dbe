@@ -29,7 +29,7 @@ R2DBE_INPUT_DATA_SOURCE_ADC = 1
 R2DBE_INPUT_DATA_SOURCE_NOISE = 2
 R2DBE_INPUT_DATA_SOURCE_TONE = 3
 # 2-bit quantization threshold
-R2DBE_QUANTIZATION_TREHSHOLD = "r2dbe_quantize_%d_thresh"
+R2DBE_QUANTIZATION_THRESHOLD = "r2dbe_quantize_%d_thresh"
 
 ######################################################### Data snapshots
 R2DBE_DATA_SNAPSHOT_8BIT = "r2dbe_snap_8bit_%d_data"
