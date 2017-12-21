@@ -99,7 +99,7 @@ class R2dbeMonitor(Thread):
 	def who(self):
 		return self._r2dbe_host
 
-	def __init__(self, r2dbe_host, period=2.0, stale_after=2, redis_host="localhost", port=6379, db=0, parent_logger=module_logger,
+	def __init__(self, r2dbe_host, period=2.0, stale_after=None, redis_host="localhost", port=6379, db=0, parent_logger=module_logger,
 	  *args, **kwargs):
 
 		super(R2dbeMonitor, self).__init__(*args, **kwargs)
@@ -121,7 +121,9 @@ class R2dbeMonitor(Thread):
 
 		# Set characteristic times
 		self._period = period
-		self._stale_after = int(stale_after)
+		self._stale_after = int(self._period + 1)
+		if stale_after:
+			self._stale_after = int(stale_after)
 
 		# Create lock and terminate condition
 		self._lock = Semaphore()
@@ -161,9 +163,6 @@ class R2dbeMonitor(Thread):
 		return stop
 
 	def _get_group_snap(self):
-		# Initialize local result storage
-		keys_values = {}
-
 		# Get snapshots for 2-bit and 8-bit data in a single read
 		x2, x8 = self._R2dbe.get_2bit_and_8bit_snapshot(list(R2DBE_INPUTS))
 
@@ -182,12 +181,12 @@ class R2dbeMonitor(Thread):
 			# State counts
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_COUNTS,
 			  arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
-			keys_values[key] = encode_attribute_data(counts2)
+			self._keys_values[key] = counts2
 
 			# State values
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_VALUES,
 			  arg=R2DBE_ARG_SNAP_2BIT_VALUES % inp)
-			keys_values[key] = encode_attribute_data(values2)
+			self._keys_values[key] = values2
 
 			# 2-bit spectral density
 			X2 = fft(x2[ii].reshape((-1,R2DBE_SNAP_FFT_SIZE)), axis=-1)
@@ -196,12 +195,12 @@ class R2dbeMonitor(Thread):
 			# Spectral density
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_DENSITY,
 			  arg=R2DBE_ARG_SNAP_2BIT_DENSITY % inp)
-			keys_values[key] = encode_attribute_data(S2)
+			self._keys_values[key] = S2
 
 			# Frequency bins
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_FREQUENCY,
 			  arg=R2DBE_ARG_SNAP_2BIT_FREQUENCY % inp)
-			keys_values[key] = encode_attribute_data(freq)
+			self._keys_values[key] = freq
 
 			# 8-bit spectral density
 			X8 = fft(x8[ii].reshape((-1,R2DBE_SNAP_FFT_SIZE)), axis=-1)
@@ -210,12 +209,12 @@ class R2dbeMonitor(Thread):
 			# Spectral density
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_DENSITY,
 			  arg=R2DBE_ARG_SNAP_8BIT_DENSITY % inp)
-			keys_values[key] = encode_attribute_data(S8)
+			self._keys_values[key] = S8
 
 			# Frequency bins
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_FREQUENCY,
 			  arg=R2DBE_ARG_SNAP_8BIT_FREQUENCY % inp)
-			keys_values[key] = encode_attribute_data(freq)
+			self._keys_values[key] = freq
 
 		# Get state counts for 8-bit data (not from snapshot)
 		counts8, values8 = self._R2dbe.get_8bit_state_counts(list(R2DBE_INPUTS))
@@ -223,68 +222,49 @@ class R2dbeMonitor(Thread):
 			# State counts
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_COUNTS,
 			  arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
-			keys_values[key] = encode_attribute_data(counts8[ii])
+			self._keys_values[key] = counts8[ii]
 			# State values
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_VALUES,
 			  arg=R2DBE_ARG_SNAP_8BIT_VALUES % inp)
-			keys_values[key] = encode_attribute_data(values8[ii])
+			self._keys_values[key] = values8[ii]
 
 		# Get 2-bit requantization thresholds
 		thresholds = self._R2dbe.get_2bit_threshold(list(R2DBE_INPUTS))
 		for ii, inp in enumerate(R2DBE_INPUTS):
 			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_THRESHOLD,
 			  arg=R2DBE_ARG_SNAP_2BIT_THRESHOLD % inp)
-			keys_values[key] = encode_attribute_data(thresholds[ii])
-
-		# Register the results
-		for key, value in keys_values.items():
-			self._store_attribute(key, value, expire_after=self._stale_after)
+			self._keys_values[key] = thresholds[ii]
 
 	def _get_group_power(self):
-		# Initialize local result storage
-		keys_values = {}
-
-		# Register the results
-		for key, value in keys_values.items():
-			self._store_attribute(key, value, expire_after=self._stale_after)
+		pass
 
 	def _get_group_time(self):
-		# Initialize local result storage
-		keys_values = {}
-
 		# Current time
 		key = self._build_key(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_NOW)
-		keys_values[key] = encode_attribute_data(self._R2dbe.get_time())
+		self._keys_values[key] = self._R2dbe.get_time()
 
 		# Up time
 		key = self._build_key(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_ALIVE)
-		keys_values[key] = encode_attribute_data(self._R2dbe.get_up_time())
+		self._keys_values[key] = self._R2dbe.get_up_time()
 
 		# GPS PPS count
 		key = self._build_key(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_GPS_PPS_COUNT)
-		keys_values[key] = encode_attribute_data(self._R2dbe.get_gps_pps_count())
+		self._keys_values[key] = self._R2dbe.get_gps_pps_count()
 
 		# GPS PPS offset seconds
 		key = self._build_key(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_GPS_PPS_OFFSET_TIME)
-		keys_values[key] = encode_attribute_data(self._R2dbe.get_gps_pps_time_offset())
+		self._keys_values[key] = self._R2dbe.get_gps_pps_time_offset()
 
 		# GPS PPS offset clock cycles
 		key = self._build_key(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_GPS_PPS_OFFSET_CYCLE)
-		keys_values[key] = encode_attribute_data(self._R2dbe.get_gps_pps_clock_offset())
-
-		# Register the results
-		for key, value in keys_values.items():
-			self._store_attribute(key, value, expire_after=self._stale_after)
+		self._keys_values[key] = self._R2dbe.get_gps_pps_clock_offset()
 
 	def _get_group_vdif(self):
-		# Initialize local result storage
-		keys_values = {}
-
 		# Get station codes
 		station_ids = self._R2dbe.get_station_id(list(R2DBE_OUTPUTS))
 		for ii, outp in enumerate(R2DBE_OUTPUTS):
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_STATION, arg=R2DBE_ARG_VDIF_STATION % outp)
-			keys_values[key] = encode_attribute_data(station_ids[ii])
+			self._keys_values[key] = station_ids[ii]
 
 		# Get IFSignal
 		inputs = self._R2dbe.get_input(list(R2DBE_INPUTS))
@@ -292,22 +272,24 @@ class R2dbeMonitor(Thread):
 			# Receiver sideband
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_RECEIVER_SIDEBAND,
 			  arg=R2DBE_ARG_VDIF_RECEIVER_SIDEBAND % inp)
-			keys_values[key] = encode_attribute_data(str(inputs[ii].rx_sb))
+			self._keys_values[key] = str(inputs[ii].rx_sb)
 			# BDC sideband
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_BDC_SIDEBAND, arg=R2DBE_ARG_VDIF_BDC_SIDEBAND % inp)
-			keys_values[key] = encode_attribute_data(str(inputs[ii].bdc_sb))
+			self._keys_values[key] = str(inputs[ii].bdc_sb)
 			# Polarization
 			key = self._build_key(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_POLARIZATION, arg=R2DBE_ARG_VDIF_POLARIZATION % inp)
-			keys_values[key] = encode_attribute_data(str(inputs[ii].pol))
-
-		# Register the results
-		for key, value in keys_values.items():
-			self._store_attribute(key, value, expire_after=self._stale_after)
+			self._keys_values[key] = str(inputs[ii].pol)
 
 	def _monitor_groups(self):
+		# Initialize local result storage
+		self._keys_values = {}
 
 		for group in self._groups:
 			self._call_by_group(group)
+
+		# Register the results
+		for key, value in self._keys_values.items():
+			self._store_attribute(key, encode_attribute_data(value), expire_after=self._stale_after)
 
 	def _store_attribute(self, name, value, expire_after=0):
 		self._redis.set(name, value, ex=expire_after)
@@ -345,7 +327,9 @@ class R2dbeMonitor(Thread):
 		# Subtract this from the wait time for start of next monitoring period
 		SLEEP_OFFSET = 0.001
 		# In case calculated wait time is negative, sleep for at least 
-		SLEEP_MIN = 0.0000001
+		SLEEP_MIN = 0.000001
+		# Set maximum sleep time for faster external interrupt
+		SLEEP_MAX = 1.0
 
 		time_prev = datetime.utcnow()
 
@@ -367,7 +351,9 @@ class R2dbeMonitor(Thread):
 						break
 
 					# Otherwise wait a while
-					sleep(max(wait_for - SLEEP_OFFSET, SLEEP_MIN))
+					sleep_time = min(wait_for, SLEEP_MAX)
+					sleep_time = max(sleep_time - SLEEP_OFFSET, SLEEP_MIN)
+					sleep(sleep_time)
 
 					# Update current time
 					time_curr = datetime.utcnow()
@@ -384,3 +370,50 @@ class R2dbeMonitor(Thread):
 		# Deregister this monitor
 		_deregister_monitor(self)
 		delattr(self, "_id")
+
+class R2dbeSyncMonitor(R2dbeMonitor):
+
+	def __init__(self, r2dbe_host, ignore_late=False, usec_into=300000, usec_tol=100000, **kwargs):
+		super(R2dbeSyncMonitor, self).__init__(r2dbe_host, **kwargs)
+
+		# Set timing characteristics
+		self._usec_into = usec_into
+		self._usec_tol = usec_tol
+
+		# Set whether late data is to be ignored
+		self._ignore_late = ignore_late
+
+	def _monitor_groups(self):
+		# Initialize local result storage
+		self._keys_values = {}
+
+		# Wait until few 100s of ms into second
+		t0 = datetime.utcnow()
+		one_sec_usec = 1000000
+		one_usec_sec = 1e-6
+		while abs(t0.microsecond - self._usec_into) > self._usec_tol:
+			if t0.microsecond > self._usec_into:
+				# sleep until start of next second
+				sleep_time_usec = one_sec_usec - t0.microsecond
+			else:
+				# sleep until earliest valid
+				sleep_time_usec = self._usec_into - self._usec_tol - t0.microsecond
+			sleep(max(sleep_time_usec * one_usec_sec, one_usec_sec))
+			t0 = datetime.utcnow()
+
+		for group in self._groups:
+			self._call_by_group(group)
+
+		# Check if all reads completed in the same second
+		t1 = datetime.utcnow()
+		if (t1.second != t0.second):
+			self.logger.warn("Not all attributes for group '{grp}' were read within the same second (delta = {sec:.3f})".format(
+			  grp=R2DBE_GROUP_TIME, sec=(t1 - t0).total_seconds()))
+
+			# If late data is ignored, return without storing
+			if self._ignore_late:
+				return
+
+		# Register the results
+		for key, value in self._keys_values.items():
+			self._store_attribute(key, encode_attribute_data(value), expire_after=self._stale_after)

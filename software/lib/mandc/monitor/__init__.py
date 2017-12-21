@@ -4,4 +4,5 @@ from monitor import (
 	build_key,
 	decode_attribute_data,
 	R2dbeMonitor,
+	R2dbeSyncMonitor,
 )
