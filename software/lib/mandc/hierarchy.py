@@ -1,7 +1,10 @@
 import logging
+import sys
 
 from ConfigParser import RawConfigParser
 from threading import Thread
+from traceback import format_exception, format_exception_only
+from Queue import Queue
 
 from config import *
 from mark6 import Mark6
@@ -9,6 +12,24 @@ from primitives import IFSignal, SignalPath, EthRoute, ModSubGroup
 from r2dbe import R2DBE_INPUTS, R2DBE_NUM_INPUTS, R2dbe
 
 module_logger = logging.getLogger(__name__)
+
+class ExceptingThread(Thread):
+
+	def __init__(self, queue, logger, *args, **kwargs):
+		super(ExceptingThread, self).__init__(*args, **kwargs)
+		self.queue = queue
+		self.logger = logger
+
+	def run(self):
+		try:
+			super(ExceptingThread, self).run()
+		except:
+			exc = sys.exc_info()
+			exc_str = format_exception_only(*exc[:2])
+			self.logger.error("<Thread[{0}]> encountered an exception: {1}".format(self.name, exc_str))
+			exc_lines = format_exception(*exc)
+			self.logger.debug("<Thread[{0}]> Traceback follows:\n{1}".format(self.name, "".join(exc_lines)))
+			self.queue.put((self.name, exc))
 
 class Backend(object):
 
@@ -75,6 +96,23 @@ class Station(object):
 		return cls(station, backends)
 
 	def setup(self):
-		threads = [Thread(target=be.setup) for be in zip(*self.backends.items())[1]]
+		# Initialize queue to keep possible exceptions
+		exc_queue = Queue()
+
+		# Start each backend in a separate thread
+		threads = [ExceptingThread(logger=self.logger, queue=exc_queue, target=be.setup, name=be.name)
+		  for be in zip(*self.backends.items())[1]]
 		[th.start() for th in threads]
 		[th.join() for th in threads]
+
+		# Check if any of the threads encountered an exception
+		num_errors = 0
+		while not exc_queue.empty():
+			num_errors += 1
+			name, exc = exc_queue.get_nowait()
+			exc_str = format_exception_only(*exc[:2])
+			self.logger.critical("An exception occured during setup of backend '{0}'".format(name))
+
+		# If any errors encountered, raise exception
+		if num_errors > 0:
+			raise RuntimeError("{0} backend(s) failed setup".format(num_errors))
