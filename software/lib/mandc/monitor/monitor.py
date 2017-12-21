@@ -298,14 +298,9 @@ class R2dbeMonitor(Thread):
 			self._store_attribute(key, value, expire_after=self._stale_after)
 
 	def _monitor_groups(self):
-		utcnow = datetime.utcnow()
-		self.logger.debug("Entering call-by-group")
 
 		for group in self._groups:
 			self._call_by_group(group)
-
-		utcnow = datetime.utcnow()
-		self.logger.debug("Exited call-by-group")
 
 	def _store_attribute(self, name, value, expire_after=0):
 		self._redis.set(name, value, ex=expire_after)
@@ -317,13 +312,13 @@ class R2dbeMonitor(Thread):
 
 		self._groups.add(group)
 
-		self.logger.debug("Added '{grp}' to monitor list".format(grp=group))
+		self.logger.info("Added '{grp}' to monitor list".format(grp=group))
 
 	def del_group(self, group):
 		try:
 			self._groups.remove(group)
 
-			self.logger.debug("Removed '{grp}' from monitor list".format(grp=group))
+			self.logger.info("Removed '{grp}' from monitor list".format(grp=group))
 
 		except KeyError:
 			self.logger.error("Could not remove '{grp}', not in monitor list".format(grp=group))
