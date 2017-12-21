@@ -229,6 +229,13 @@ class R2dbeMonitor(Thread):
 			  arg=R2DBE_ARG_SNAP_8BIT_VALUES % inp)
 			keys_values[key] = encode_attribute_data(values8[ii])
 
+		# Get 2-bit requantization thresholds
+		thresholds = self._R2dbe.get_2bit_threshold(list(R2DBE_INPUTS))
+		for ii, inp in enumerate(R2DBE_INPUTS):
+			key = self._build_key(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_THRESHOLD,
+			  arg=R2DBE_ARG_SNAP_2BIT_THRESHOLD % inp)
+			keys_values[key] = encode_attribute_data(thresholds[ii])
+
 		# Register the results
 		for key, value in keys_values.items():
 			self._store_attribute(key, value, expire_after=self._stale_after)
