@@ -46,6 +46,9 @@ def _configure_logging(logfilename=None, verbose=None):
 	if logfilename:
 		logger.info("Log file is '{log}'".format(log=logfilename))
 
+	# Return root logger
+	return logger
+
 if __name__ == "__main__":
 	import argparse
 
@@ -59,7 +62,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	# Configure logging
-	_configure_logging(logfilename=args.log, verbose=args.verbose)
+	logger = _configure_logging(logfilename=args.log, verbose=args.verbose)
 
 	# Parse configuration file
 	station_backend = Station.from_file(args.conf)
