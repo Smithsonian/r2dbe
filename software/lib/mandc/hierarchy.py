@@ -10,26 +10,9 @@ from config import *
 from mark6 import Mark6
 from primitives import IFSignal, SignalPath, EthRoute, ModSubGroup
 from r2dbe import R2DBE_INPUTS, R2DBE_NUM_INPUTS, R2dbe
+from utils import ExceptingThread
 
 module_logger = logging.getLogger(__name__)
-
-class ExceptingThread(Thread):
-
-	def __init__(self, queue, logger, *args, **kwargs):
-		super(ExceptingThread, self).__init__(*args, **kwargs)
-		self.queue = queue
-		self.logger = logger
-
-	def run(self):
-		try:
-			super(ExceptingThread, self).run()
-		except:
-			exc = sys.exc_info()
-			exc_str = format_exception_only(*exc[:2])
-			self.logger.error("<Thread[{0}]> encountered an exception: {1}".format(self.name, exc_str))
-			exc_lines = format_exception(*exc)
-			self.logger.debug("<Thread[{0}]> Traceback follows:\n{1}".format(self.name, "".join(exc_lines)))
-			self.queue.put((self.name, exc))
 
 class Backend(object):
 
@@ -100,7 +83,7 @@ class Station(object):
 		exc_queue = Queue()
 
 		# Start each backend in a separate thread
-		threads = [ExceptingThread(logger=self.logger, queue=exc_queue, target=be.setup, name=be.name)
+		threads = [ExceptingThread(exc_queue, target=be.setup, name=be.name)
 		  for be in zip(*self.backends.items())[1]]
 		[th.start() for th in threads]
 		[th.join() for th in threads]
