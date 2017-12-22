@@ -195,7 +195,7 @@ class MonitorGroupDaemon(Daemon):
 
 	@property
 	def name(self):
-		return "_".join(["monitor", self._r2dbe_host])
+		return "_".join(["r2daemon", self._r2dbe_host])
 
 	def run(self):
 		# First configure logging
