@@ -52,7 +52,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Configure R2DBE backends")
 	parser.add_argument("-l", "--log-file", dest="log", metavar="FILE", type=str, default=_default_log,
 	  help="write log messages to FILE in addition to stdout (default is $HOME/log/")
-	parser.add_argument("-v", "--verbose", action="store_true", default=True,
+	parser.add_argument("-v", "--verbose", action="store_true", default=False,
 	  help="set logging to level DEBUG")
 	parser.add_argument("conf", metavar="CONFIG", type=str,
 	  help="backend configuration file")
