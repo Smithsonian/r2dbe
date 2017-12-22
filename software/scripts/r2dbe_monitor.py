@@ -1,320 +1,485 @@
-import corr
-import struct
-from numpy import int32, uint32, array, zeros, arange, linspace, split, conjugate, log10
-from numpy.fft import rfft
-from datetime import datetime, timedelta, tzinfo
-import r2dbe_snaps
-import socket
-import subprocess
+import logging
+
+import os.path
 import sys
-import time
 
-import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
+from datetime import datetime
+from matplotlib.pyplot import figure, ion, pause
+from numpy import abs, log10
+from redis import StrictRedis
+from time import sleep
+from threading import Semaphore
+
+from mandc.monitor.defines import *
+from mandc.monitor import (
+  build_key,
+  decode_attribute_data,
+)
+
+from mandc.r2dbe import (
+  R2DBE_INPUTS,
+  R2DBE_OUTPUTS,
+)
 
 
-class UTC(tzinfo):
-    """ UTC tzinfo """
+_color_map = ["b", "g"]
 
-    def utcoffset(self, dt):
-        return timedelta(0)
+_stop_lock = Semaphore()
+_stop = False
 
-    def tzname(self, dt):
-        return "UTC"
+def handle_close(evt):
+	global _stop_lock
+	global _stop
 
-    def dst(self, dt):
-        return timedelta(0)
+	# Acquire lock and set stop condition
+	_stop_lock.acquire()
+	_stop = True
+	_stop_lock.release()
 
-def r2dbe_datetime(name,gps_cnt):
+class Panel(object):
 
-    # now how many usecs per frame
-    usecs_per_frame = 8
-    
-    # get ref epoch and data_frame
-    secs_since_ep = roach2.read_int('r2dbe_vdif_'+name+'_hdr_w0_sec_ref_ep')    
-    ref_epoch     = roach2.read_int('r2dbe_vdif_'+name+'_hdr_w1_ref_ep')    
+	def __init__(self, axes, source):
+		# Set axes
+		self._axes = axes
 
-    # get the date
-    date = datetime(year = 2000 + ref_epoch/2,
-                    month = 1 + (ref_epoch & 1) * 6,
-                    day = 1, tzinfo=UTC())
+		# Set data source
+		self._source = source
 
-    # get the seconds from the start of the day
-    secs = timedelta(seconds = secs_since_ep + gps_cnt)
+	def retrieve_data(self, key):
+		raw = self._source.get(key)
+		if raw is not None:
+			return decode_attribute_data(raw)
 
-    return date + secs
+	def update(self):
+		pass
 
-def get_data():
-    # read threshold values
-    th0 = roach2.read_int('r2dbe_quantize_0_thresh')
-    th1 = roach2.read_int('r2dbe_quantize_1_thresh')
-    
-    # get data from all snapshots
-    x=corr.snap.snapshots_get([roach2,roach2,roach2,roach2],
-                              ['r2dbe_snap_8bit_0_data',
-                               'r2dbe_snap_8bit_1_data',
-                               'r2dbe_snap_2bit_0_data',
-                               'r2dbe_snap_2bit_1_data'])
-    
-    L = x['lengths'][0]
-    #unpack the 8 bit data
-    x0_8 = r2dbe_snaps.data_from_snap_8bit(x['data'][0],L) 
-    x1_8 = r2dbe_snaps.data_from_snap_8bit(x['data'][1],L)
-    
-    x0_2 = r2dbe_snaps.data_from_snap_2bit(x['data'][2],L) 
-    x1_2 = r2dbe_snaps.data_from_snap_2bit(x['data'][3],L)
+class HistogramPanel(Panel):
 
-    clk = roach2.est_brd_clk()            
-    gps_cnt = roach2.read_uint('r2dbe_onepps_gps_pps_cnt')            
-    msr_cnt = roach2.read_uint('r2dbe_onepps_msr_pps_cnt')            
-    offset_samp = roach2.read_int('r2dbe_onepps_offset')            
-    offset_ns   = float(offset_samp)/clk*1e3
-    
+	def __init__(self, axes, source, key_bin, key_height, xlim=None, ylim=None, bin_width=0.5, color="b",
+	  auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None):
 
-    pol_chr = ['L (or X)', 'R (or Y)']
-    pol0num = roach2.read_uint('r2dbe_vdif_0_hdr_w4') & 0x1           
-    pol1num = roach2.read_uint('r2dbe_vdif_1_hdr_w4') & 0x1           
-    pol0    = pol_chr[pol0num]
-    pol1    = pol_chr[pol1num]
-    
+		# Generic Panel
+		super(HistogramPanel, self).__init__(axes, source)
 
-    st0num  = roach2.read_uint('r2dbe_vdif_0_hdr_w3_station_id')            
-    st1num  = roach2.read_uint('r2dbe_vdif_1_hdr_w3_station_id')            
-    st0     = ''.join([chr((st0num>>8) & 0xff), chr(st0num & 0xff)])
-    st1     = ''.join([chr((st1num>>8) & 0xff), chr(st1num & 0xff)])
+		# Set data source keys
+		self._key_b = key_bin
+		self._key_h = key_height
 
-    return x0_8, x1_8, x0_2, x1_2, th0, th1, clk, gps_cnt, msr_cnt, offset_samp,offset_ns, pol0, pol1, st0, st1
+		# Set some properties
+		if xlim is not None:
+			self._axes.set_xlim(xlim)
+		if ylim is not None:
+			self._axes.set_ylim(ylim)
+		if grid:
+			self._axes.grid()
+		if title is not None:
+			self._axes.set_title(title)
+		if xlabel is not None:
+			self._axes.set_xlabel(xlabel)
+		if ylabel is not None:
+			self._axes.set_ylabel(ylabel)
+		self._auto_xtick = auto_xtick
+		self._auto_ytick = auto_ytick
+		self._bin_width = bin_width
+		self._color = color
 
-def plot_data():
-    # get data
-    x0_8, x1_8, x0_2, x1_2, th0, th1, clk, gps_cnt, msr_cnt, offset_samp, offset_ns, pol0, pol1, st0, st1 = get_data()
-    
-    # now have x0_8, x0_2, and the IF1s, now histograms
-    
-    bins8 = arange(-128.5,128.5,1)
-    bins2 = arange(-2.5,2.5,1)
-    
-    ylim_8 = 0.06
-    ylim_2 = 0.5
-    
-    lim0_1 = -th0-0.5
-    lim0_2 = -0.5
-    lim0_3 = th0-0.5
-    lim1_1 = -th1-0.5
-    lim1_2 = -0.5
-    lim1_3 = th1-0.5
-    
-    # create ideal gaussian shape for 8 bits
-    th_id = 30 # ideal thresh
-    g = mlab.normpdf(bins8, 0, th_id)
+	def update(self):
 
-    plt.clf()
-    plt.subplot(2,4,1)
-    plt.plot((lim0_1, lim0_1),(0, 1),'k--')
-    plt.plot((lim0_2, lim0_2),(0, 1),'k--')
-    plt.plot((lim0_3, lim0_3),(0, 1),'k--')
-    plt.plot(bins8,g,'gray', linewidth=1)
-    plt.hist(  x0_8, 
-                 bins8, 
-                 normed=1, 
-                 facecolor='blue', 
-                 alpha=0.9, 
-                 histtype='stepfilled')
-    plt.xlim(-129,128)
-    plt.xlabel('bin')
-    plt.ylim(0,ylim_8)
-    plt.ylabel('Frequency')
-    plt.title('IF0: 8-bit Data Hist')
-    plt.annotate('th={0}'.format(th0),xy=(th0+5,0.05))
-    plt.annotate('ideal',xy=(bins8[175],g[175]),xytext=(75,0.01),arrowprops=dict(facecolor='black', width=0.1, headwidth=4, shrink=0.1))
-    if th0<th_id-3:
-        plt.annotate('low pow', xy=(th0+5,0.045))
-    elif th0>th_id+3:
-        plt.annotate('high pow', xy=(th0+5,0.045))
-    
-    plt.grid()
-    
-    plt.subplot(2,4,2)
-    plt.plot((lim1_1, lim0_1),(0, 1),'k--')
-    plt.plot((lim1_2, lim0_2),(0, 1),'k--')
-    plt.plot((lim1_3, lim0_3),(0, 1),'k--')
-    plt.plot(bins8,g,'gray', linewidth=1)
-    plt.hist(  x1_8, 
-                 bins8, 
-                 normed=1, 
-                 facecolor='green', 
-                 alpha=0.75, 
-                 histtype='stepfilled')
-    plt.xlim(-129,128)
-    plt.xlabel('bin')
-    plt.ylim(0,ylim_8)
-    plt.ylabel('Frequency')
-    plt.title('IF1: 8-bit Data Hist')
-    plt.annotate('th={0}'.format(th1),xy=(th1+5,0.05))
-    plt.annotate('ideal',xy=(bins8[175],g[175]),xytext=(75,0.01),arrowprops=dict(facecolor='black', width=0.1, headwidth=4, shrink=0.1))
-    if th1<th_id-3:
-        plt.annotate('low pow', xy=(th1+5,0.045))
-    elif th1>th_id+3:
-        plt.annotate('high pow', xy=(th1+5,0.045))
-    plt.grid()
-    
-    
-    plt.subplot(2,4,5)
-    n = plt.hist( x0_2, 
-                    bins2, 
-                    normed=1, 
-                    facecolor='blue', 
-                    alpha=0.75, 
-                    histtype='stepfilled')
-    for k in range(4):
-        plt.annotate('{0:.1%}'.format(n[0][k]),xy=(n[1][k]+0.2,0.02))
-    plt.xlim(-3,2)
-    plt.xlabel('bin')
-    plt.ylim(0,ylim_2)
-    plt.ylabel('Frequency')
-    plt.title('IF0: 2-bit Data Hist')
-    plt.grid()
-    
-    plt.subplot(2,4,6)
-    n = plt.hist( x1_2, 
-                    bins2, 
-                    normed=1, 
-                    facecolor='green', 
-                    alpha=0.75, 
-                    histtype='stepfilled')
-    for k in range(4):
-        plt.annotate('{0:.1%}'.format(n[0][k]),xy=(n[1][k]+0.2,0.02))
-    plt.xlim(-3,2)
-    plt.xlabel('bin')
-    plt.ylim(0,ylim_2)
-    plt.ylabel('Frequency')
-    plt.title('IF1: 2-bit Data Hist')
-    plt.grid()
+		# Try to retrieve data
+		proxy_b = self.retrieve_data(self._key_b)
+		proxy_h = self.retrieve_data(self._key_h)
 
-    
-    # fft
-    NFFT = 1024
-    freqs = linspace(0.0, 4096/2, num=NFFT/2)
-    y0_8 = rfft(split(x0_8, len(x0_8)/NFFT), axis=1)
-    Y0_8 = (y0_8 * conjugate(y0_8)).sum(axis=0)
+		# Check if None returned
+		if any([p is None for p in [proxy_b, proxy_h]]):
+			# Do not update, maybe log
+			print "One or more data retrievals failed"
+			return
 
-    y1_8 = rfft(split(x1_8, len(x1_8)/NFFT), axis=1)
-    Y1_8 = (y1_8 * conjugate(y1_8)).sum(axis=0)
+		# Data received, carry on
+		self._data_b = proxy_b
+		self._data_h = 1.0 * proxy_h / proxy_h.sum()
 
-    y0_2 = rfft(split(x0_2, len(x0_2)/NFFT), axis=1)
-    Y0_2 = (y0_2 * conjugate(y0_2)).sum(axis=0)
+		# Update x- and y-ticks according to data
+		if self._auto_xtick:
+			self._axes.set_xticks(self._data_b)
+		if self._auto_ytick:
+			self._axes.set_yticks(sorted(set(self._data_h)))
+			self._axes.set_yticklabels(["%.2f" % y for y in sorted(set(self._data_h))])
 
-    y1_2 = rfft(split(x1_2, len(x1_2)/NFFT), axis=1)
-    Y1_2 = (y1_2 * conjugate(y1_2)).sum(axis=0)
-    
-    # plot IFs for 8 bit
-    plt.subplot(2,4,3)
-    plt.step(freqs, 10*log10(abs(Y0_8[:-1])), 'b', label='IF 0')
-    plt.step(freqs, 10*log10(abs(Y1_8[:-1])), 'g', label='IF 1')
-   
-    plt.xlim(0, 2048)
-    plt.xlabel('Freq (MHz)')
-    plt.ylabel('dB')
-    plt.title('Autos 8-bit')
-    plt.legend()
-    plt.grid()
+		# If not plotted yet, initiate
+		if not hasattr(self, "_bars"):
+			self._bars = self._axes.bar(self._data_b, self._data_h)
 
-    plt.subplot(2,4,7)
-    plt.step(freqs, 10*log10(abs(Y0_2[:-1])), 'b', label='IF 0')
-    plt.step(freqs, 10*log10(abs(Y1_2[:-1])), 'g', label='IF 1')
-   
-    plt.xlim(0, 2048)
-    plt.xlabel('Freq (MHz)')
-    plt.ylabel('dB')
-    plt.title('Autos 2-bit')
-    plt.legend()
-    plt.grid()
+			# Modify some display parameters
+			for b, bar in zip(self._data_b, self._bars):
+				bar.set_x(b - self._bin_width / 2.0)
+				bar.set_width(self._bin_width)
+				bar.set_color(self._color)
 
-    # status
-    left_lim = 0.02
-    plt.subplot(1,4,4)
-    plt.annotate('{0}'.format(socket.gethostname()),
-                 xy=(left_lim,0.95))
-    plt.annotate('________________________________',
-                 xy=(left_lim,0.925))
-    plt.annotate('IF0: {0}'.format(r2dbe_datetime('0',gps_cnt)),
-                 xy=(left_lim,0.90))
-    plt.annotate('IF1: {0}'.format(r2dbe_datetime('1',gps_cnt)),
-                 xy=(left_lim,0.85))
-    plt.annotate('________________________________',
-                 xy=(left_lim,0.80))
+		# Update
+		for b, new_height, bar in zip(self._data_b, self._data_h, self._bars):
+			bar.set_height(new_height)
 
-    # station ids, polarizations, etc, IF noise box, etc
-    plt.annotate('IF0: Pol {0}, station id {1}'.format(pol0,st0),
-                 xy=(left_lim,0.75))
-    plt.annotate('IF1: Pol {0}, station id {1}'.format(pol1,st1),
-                 xy=(left_lim,0.7))
-    plt.annotate('________________________________',
-                 xy=(left_lim,0.65))
+class LinePanel(Panel):
 
-    # status
-    plt.annotate('fpga clk rate (est):       {0:.2f} MHz'.format(clk),
-                 xy=(left_lim,0.6))
-    plt.annotate('gps pps ticks (secs past): {0}'.format(gps_cnt),
-                 xy=(left_lim,0.55))
-    plt.annotate('msr pps ticks:             {0}'.format(msr_cnt),
-                 xy=(left_lim,0.50))
-    plt.annotate('gps vs internal offset:    {0} samples'.format(offset_samp),
-                 xy=(left_lim,0.45))
-    plt.annotate('gps vs internal offset:    {0} ns'.format(round(offset_ns)),
-                 xy=(left_lim,0.4))
+	def __init__(self, axes, source, keys_x, keys_y, xlim=None, ylim=None, color_map=["b", "g", "r", "c", "y", "m", "k"],
+	  grid=False, title=None, xlabel=None, ylabel=None, line_labels=None, xconv=None, yconv=None):
 
-    plt.xlim(0,1)
-    plt.ylim(0,1)
-    f = plt.gca()
-    f.axes.get_xaxis().set_visible(False)
-    f.axes.get_yaxis().set_visible(False)
+		# Generic Panel
+		super(LinePanel, self).__init__(axes, source)
 
-    #pylab.savefig('/home/oper/if0_8.pdf')
-    fig.canvas.draw()
-    fig.canvas.manager.window.after(100, plot_data)
-    
+		# Set data source keys
+		self._keys_x = keys_x
+		self._keys_y = keys_y
 
-if __name__ == '__main__':
+		# Set some properties
+		if xlim is not None:
+			self._axes.set_xlim(xlim)
+		if ylim is not None:
+			self._axes.set_ylim(ylim)
+		if grid:
+			self._axes.grid()
+		if title is not None:
+			self._axes.set_title(title)
+		if xlabel is not None:
+			self._axes.set_xlabel(xlabel)
+		if ylabel is not None:
+			self._axes.set_ylabel(ylabel)
+		if line_labels is not None:
+			self._line_labels = line_labels
+		if xconv is not None:
+			self._xconv = xconv
+		if yconv is not None:
+			self._yconv = yconv
+		self._color_map = color_map
 
-    import argparse
-    parser = argparse.ArgumentParser(description='Monitor R2DBE status')
-    parser.add_argument('-t','--timeout',metavar='TIMEOUT',type=float,default=5.0,
-        help="timeout after so many seconds if R2DBE not connected (default is 5.0)")
-    parser.add_argument('-v','--verbose',action='count',
-        help="control verbosity, use multiple times for more detailed output")
-    parser.add_argument('--no-X', dest='noX', action='store_true',
-        help="run non-X version of R2DBE monitor")
-    parser.add_argument('host',metavar='R2DBE',type=str,nargs='?',default='r2dbe-1',
-        help="hostname or ip address of r2dbe (default is 'r2dbe-1')")
-    args = parser.parse_args()
+	def update(self):
 
-    if args.noX:
-        mon_nox_args = [sys.executable, "r2dbe_monitor_nox.py"]
-        if args.verbose is not None:
-            for iv in range(args.verbose):
-                mon_nox_args.append('-v')
-        mon_nox_args.append('-t')
-        mon_nox_args.append('%f'%args.timeout)
-        mon_nox_args.append(args.host)
-        print "Running R2DBE monitor in no-X mode: {0}".format(' '.join(mon_nox_args))
-	time.sleep(2)
-        subprocess.check_call(mon_nox_args)
-        sys.exit(0)
+		# Try to retrieve data
+		proxy_x = [self.retrieve_data(k) for k in self._keys_x]
+		proxy_y = [self.retrieve_data(k) for k in self._keys_y]
 
-    # connect to roach2
-    roach2 = corr.katcp_wrapper.FpgaClient(args.host)
-    if not roach2.wait_connected(timeout=args.timeout):
-        msg = "Could not establish connection to '{0}' within {1} seconds, aborting".format(
-            args.host,args.timeout)
-        raise RuntimeError(msg)
+		# Check if None returned
+		if any([x is None for x in proxy_x]) or any([y is None for y in proxy_y]):
+			# Do not update, maybe log
+			print "One or more data retrievals failed"
+			return
 
-    if args.verbose > 1:
-        print "connected to '{0}'".format(args.host)
+		# Data received, apply conversion functions
+		if hasattr(self, "_xconv"):
+			proxy_x = [self._xconv(x) for x in proxy_x]
+		if hasattr(self, "_yconv"):
+			proxy_y = [self._yconv(y) for y in proxy_y]
+		self._datas_x = proxy_x
+		self._datas_y = proxy_y
+		self._colors = [self._color_map[ii % len(self._color_map)] for ii, _ in enumerate(self._datas_y)]
 
-    # set up plotting 
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    fig.canvas.manager.window.after(100,plot_data)
-    plt.show()
-    
+		# If not plotted yet, initiate
+		if not hasattr(self, "_lines"):
+			self._lines = [self._axes.plot(x, y, c)[0] for x, y, c in zip(self._datas_x, self._datas_y, self._colors)]
+
+		# If line labels, set them
+		if hasattr(self, "_line_labels"):
+			for label, line in zip(self._line_labels, self._lines):
+				line.set_label(label)
+			# If legend not displayed yet, do it
+			if not hasattr(self, "_legend"):
+				self._legend = self._axes.legend()
+
+		# Update
+		for new_x, new_y, line in zip(self._datas_x, self._datas_y, self._lines):
+			line.set_xdata(new_x)
+			line.set_ydata(new_y)
+
+class TextInfoPanel(Panel):
+
+	def __init__(self, axes, source, r2dbe_host):
+
+		# Generic Panel
+		super(TextInfoPanel, self).__init__(axes, source)
+
+		# Set R2DBE hostname
+		self._r2dbe_host = r2dbe_host
+
+		# Clear x- and y-ticks
+		self._axes.set_xticks([])
+		self._axes.set_yticks([])
+
+		# Set x- and y-limits
+		self._axes.set_xlim([0, 1])
+		self._axes.set_ylim([0, 1])
+
+		# Set geomtry parameters
+		xlim = self._axes.get_xlim()
+		ylim = self._axes.get_ylim()
+		self._left_x = xlim[0]
+		self._full_x = xlim[1] - xlim[0]
+		self._top_y = ylim[1]
+		self._full_y = ylim[1] - ylim[0]
+
+	@property
+	def _keys(self):
+		keys = []
+		# Add VDIF group keys
+		for inp in R2DBE_OUTPUTS:
+			keys.extend([build_key(R2DBE_MCLASS, self._r2dbe_host, R2DBE_GROUP_VDIF, attr, arg=arg) for attr, arg in [
+			  (R2DBE_ATTR_VDIF_STATION, R2DBE_ARG_VDIF_STATION % inp),
+			  (R2DBE_ATTR_VDIF_POLARIZATION, R2DBE_ARG_VDIF_POLARIZATION % inp),
+			  (R2DBE_ATTR_VDIF_RECEIVER_SIDEBAND, R2DBE_ARG_VDIF_POLARIZATION % inp),
+			  (R2DBE_ATTR_VDIF_BDC_SIDEBAND, R2DBE_ARG_VDIF_BDC_SIDEBAND % inp)
+			]])
+		# Add Time group keys
+		keys.extend([build_key(R2DBE_MCLASS, self._r2dbe_host, R2DBE_GROUP_TIME, attr, arg=None) for attr in [
+		  R2DBE_ATTR_TIME_NOW,
+		  R2DBE_ATTR_TIME_GPS_PPS_COUNT,
+		  R2DBE_ATTR_TIME_GPS_PPS_OFFSET_TIME,
+		  R2DBE_ATTR_TIME_GPS_PPS_OFFSET_CYCLE,
+		  R2DBE_ATTR_TIME_ALIVE
+		]])
+
+		return keys
+
+	@property
+	def _names(self):
+		# Trim off the mclass and instance, and replace dots with underscores
+		names = ["_".join(k.split(".")[2:]).replace(".", "_") for k in self._keys]
+
+		return names
+
+	def _build_name(self, group, attr, arg=None):
+		components = [group, attr]
+		if arg is not None:
+			components.extend([arg])
+		return "_".join(components)
+
+	def update(self):
+		# Retrieve necessary data
+		proxy_values = [self.retrieve_data(k) for k in self._keys]
+		if any([v is None for v in proxy_values]):
+			print "One or more data retrievals failed"
+			return
+
+		values = dict(zip(self._names, proxy_values))
+
+		# Build lines to display
+		lines = []
+		# Display R2DBE hostname
+		lines.append("R2DBE host: {0}".format(self._r2dbe_host))
+		# Per-input lines
+		for inp in R2DBE_INPUTS:
+			# Display IF signal parameters and station code
+			pol_name = self._build_name(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_POLARIZATION, R2DBE_ARG_VDIF_POLARIZATION % inp)
+			pol_str = values[pol_name]
+			rx_name = self._build_name(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_RECEIVER_SIDEBAND,
+			  R2DBE_ARG_VDIF_RECEIVER_SIDEBAND % inp)
+			rx_str = values[rx_name].split("=")[-1]
+			bdc_name = self._build_name(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_BDC_SIDEBAND, R2DBE_ARG_VDIF_BDC_SIDEBAND % inp)
+			bdc_str = values[bdc_name].split("=")[-1]
+			stid_name = self._build_name(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_STATION, R2DBE_ARG_VDIF_STATION % inp)
+			stid_str = values[stid_name]
+			lines.append("IF{inp}: Pol={pol}, Rx={rx}, BDC={bdc}, Station={stid}".format(inp=inp,
+			  pol=pol_str, rx=rx_str, bdc=bdc_str, stid=stid_str))
+			# 2-bit quantization threshold
+			# TODO
+
+		if not hasattr(self, "_annotates"):
+			dy = 1.0 * self._full_y / len(lines)
+			x0 = self._left_x + self._full_x / 20.0
+			for ii, line in enumerate(lines):
+				y = self._top_y - (ii + 0.5)*dy
+				self._axes.annotate(line, xy=(x0, y))
+		else:
+			for an, line in zip(self._annotates, lines):
+				an.set_text(line)
+
+class DisplayR2dbeMonitor(object):
+
+	def __init__(self, r2dbe_host, redis_source, rows=2, cols=4):
+
+		# Set R2DBE host
+		self._r2dbe_host = r2dbe_host
+
+		# Set redis
+		self._redis = redis_source
+
+		# Create figure
+		self._fig = figure()
+
+		# Register close handler
+		self._fig.canvas.mpl_connect('close_event', handle_close)
+
+		# Adjust subplot parameters
+		self._fig.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95, wspace=None, hspace=None)
+
+		# Set layout
+		self._rows = rows
+		self._cols = cols
+
+		# Initialize panels
+		self._panels = []
+
+	@property
+	def next_order(self):
+		return len(self._panels) + 1
+
+	def add_panel(self, order, cls, *args, **kwargs):
+		# Create axes
+		axes = self._fig.add_subplot(self._rows, self._cols, order)
+
+		# Instantiate panel object
+		panel = cls(axes, self._redis, *args, **kwargs)
+
+		# Add to panel list
+		self._panels.append(panel)
+
+		return panel
+
+	def close(self):
+		# Allow some last updates
+		pause(1)
+
+	def update(self):
+		for panel in self._panels:
+			panel.update()
+
+def _configure_logging(logfilename=None, verbose=None):
+	# Set up root logger
+	logger = logging.getLogger()
+	logger.setLevel(logging.INFO)
+
+	# Always add logging to stdout
+	stdout_handler = logging.StreamHandler(sys.stdout)
+	all_handlers = [stdout_handler]
+	# And optionally to file
+	if logfilename:
+		file_handler = logging.FileHandler(logfilename, mode="a")
+		all_handlers.append(file_handler)
+	# Add handlers
+	for handler in all_handlers:
+		logger.addHandler(handler)
+
+	# If verbose, set level to DEBUG on file, or stdout if no logging to file
+	if verbose:
+		# First set DEBUG on root logger
+		logger.setLevel(logging.DEBUG)
+		# Then revert to INFO on 0th handler (i.e. stdout)
+		all_handlers[0].setLevel(logging.INFO)
+		# Finally DEBUG again on 1th handler (file if it exists, otherwise stdout again)
+		all_handlers[-1].setLevel(logging.DEBUG)
+
+	# Create and set formatters
+	formatter = logging.Formatter('%(name)-30s: %(asctime)s : %(levelname)-8s %(message)s')
+	for handler in all_handlers:
+		handler.setFormatter(formatter)
+
+	# Initial log messages
+	logger.info("Started logging in {filename}".format(filename=__file__))
+	if logfilename:
+		logger.info("Log file is '{log}'".format(log=logfilename))
+
+	# Return root logger
+	return logger
+
+if __name__ == "__main__":
+	import argparse
+
+	parser = argparse.ArgumentParser(description='Monitor R2DBE status')
+	parser.add_argument("-l", "--log-file", dest="log", metavar="FILE", type=str,
+	  help="write log messages to FILE in addition to stdout (default is $HOME/log/")
+	parser.add_argument("-v", "--verbose", action="store_true", default=False,
+	  help="set logging to level DEBUG")
+	parser.add_argument("r2dbe_host", metavar="HOST", type=str,
+	  help="control the daemon associated with HOST")
+	args = parser.parse_args()
+
+	# Configure logging
+	_default_log_basename = os.path.extsep.join([os.path.basename(os.path.splitext(__file__)[0]), "log"])
+	_default_log = os.path.sep.join([os.path.expanduser("~"), "log",_default_log_basename])
+	logfile = _default_log
+	if args.log:
+		logfile = args.log
+	logger = _configure_logging(logfilename=logfile, verbose=args.verbose)
+
+	t0 = datetime.utcnow()
+	logger.info("Please be patient while the monitor starts up (takes ~45 seconds)...")
+
+	# Set redis server
+	redis = StrictRedis("localhost")
+
+	# Create display instance
+	drm = DisplayR2dbeMonitor(args.r2dbe_host, redis)
+
+	# Set pyplot interactive mode
+	ion()
+
+	# Add 8-bit state histogram panels
+	for ii, inp in enumerate(R2DBE_INPUTS):
+		key_b = build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_VALUES,
+		  arg=R2DBE_ARG_SNAP_8BIT_VALUES % inp)
+		key_h = build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_COUNTS,
+		  arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
+		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_8BIT_COUNTS, arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
+		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
+		  xlabel="Sample state", ylabel="Fraction")
+
+	# Add 8-bit spectral density panel
+	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_FREQUENCY,
+	  arg=R2DBE_ARG_SNAP_8BIT_FREQUENCY % inp) for inp in R2DBE_INPUTS]
+	keys_y = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_DENSITY,
+	  arg=R2DBE_ARG_SNAP_8BIT_DENSITY % inp) for inp in R2DBE_INPUTS]
+	title_str = "{attr}".format(attr=R2DBE_ATTR_SNAP_8BIT_DENSITY)
+	drm.add_panel(drm.next_order, LinePanel, keys_x, keys_y, color_map=_color_map, title=title_str,
+	  xlabel="Frequency [MHz]", ylabel="Normalized spectral density [dB]",
+	  xconv=lambda x: x/1e6, yconv=lambda y: 20*log10(abs(y)/max(abs(y))),
+	  line_labels=["{arg}".format(arg=R2DBE_ARG_SNAP_8BIT_DENSITY % inp) for inp in R2DBE_INPUTS])
+
+	# Add text information panel
+	text_panel = drm.add_panel(drm.next_order, TextInfoPanel, args.r2dbe_host)
+
+	# Add 2-bit state histogram panels
+	for ii, inp in enumerate(R2DBE_INPUTS):
+		key_b = build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_VALUES,
+		  arg=R2DBE_ARG_SNAP_2BIT_VALUES % inp)
+		key_h = build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_COUNTS,
+		  arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
+		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_2BIT_COUNTS, arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
+		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
+		  xlabel="Sample state", ylabel="Fraction")
+
+	# 2-bit spectral density panels
+	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_FREQUENCY,
+	  arg=R2DBE_ARG_SNAP_2BIT_FREQUENCY % inp) for inp in R2DBE_INPUTS]
+	keys_y = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_DENSITY,
+	  arg=R2DBE_ARG_SNAP_2BIT_DENSITY % inp) for inp in R2DBE_INPUTS]
+	title_str = "{attr}".format(attr=R2DBE_ATTR_SNAP_2BIT_DENSITY)
+	line_panel = drm.add_panel(drm.next_order, LinePanel, keys_x, keys_y, color_map=_color_map, title=title_str,
+	  xlabel="Frequency [MHz]", ylabel="Normalized spectral density [dB]",
+	  xconv=lambda x: x/1e6, yconv=lambda y: 20*log10(abs(y)/max(abs(y))),
+	  line_labels=["{arg}".format(arg=R2DBE_ARG_SNAP_8BIT_DENSITY % inp) for inp in R2DBE_INPUTS])
+
+	# Resize text panel
+	new_bottom = line_panel._axes.get_position().p0[1] # <- get_position returns Bbox, p0 is lower left? and p0[1] is y?
+	new_position = text_panel._axes.get_position()
+	new_position.p0[1] = new_bottom
+	text_panel._axes.set_position(new_position)
+
+	t1 = datetime.utcnow()
+	logger.info("Startup completed in {0:.3f} seconds".format((t1-t0).total_seconds()))
+
+	while True:
+		# Update monitor
+		drm.update()
+		pause(0.001)
+
+		# Check if stop condition set
+		_stop_lock.acquire()
+		is_stopped = _stop
+		_stop_lock.release()
+
+		# If stopped, terminate
+		if is_stopped:
+
+			logger.info("Stop condition, terminating...")
+
+			drm.close()
+			break
