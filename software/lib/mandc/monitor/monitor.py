@@ -35,22 +35,19 @@ def _register_monitor(monitor):
 		global _registry_lock
 		
 		# Acquire lock
-		_register_lock.acquire(True)
+		with _register_lock:
 
-		# Register the monitor
-		monitoree = monitor.who
-		new_id = 0
-		try:
-			new_id = max(_register[monitoree]) + 1
-			_register[monitoree].append(new_id)
-		except KeyError:
-			# No other monitors registered yet, keep initial new_id
-			_register[monitoree] = [new_id]
+			# Register the monitor
+			monitoree = monitor.who
+			new_id = 0
+			try:
+				new_id = max(_register[monitoree]) + 1
+				_register[monitoree].append(new_id)
+			except KeyError:
+				# No other monitors registered yet, keep initial new_id
+				_register[monitoree] = [new_id]
 
-		module_logger.info("Registered monitor '{monid}' for entity '{who}'".format(monid=new_id, who=monitoree))
-
-		# Release lock
-		_register_lock.release()
+			module_logger.info("Registered monitor '{monid}' for entity '{who}'".format(monid=new_id, who=monitoree))
 
 		return new_id
 
@@ -58,26 +55,23 @@ def _deregister_monitor(monitor):
 		global _registry_lock
 		
 		# Acquire lock
-		_register_lock.acquire(True)
+		with _register_lock:
 
-		# Register the monitor
-		monitoree = monitor.who
-		try:
-			_register[monitoree].pop(_register[monitoree].index(monitor.identity))
-			if len(_register[monitoree]) == 0:
-				_register.pop(monitoree)
-		except IndexError:
-			module_logger.error("Monitor '{monid}' for entity '{who}' is not registered".format(monid=monitor.identity,
+			# Register the monitor
+			monitoree = monitor.who
+			try:
+				_register[monitoree].pop(_register[monitoree].index(monitor.identity))
+				if len(_register[monitoree]) == 0:
+					_register.pop(monitoree)
+			except IndexError:
+				module_logger.error("Monitor '{monid}' for entity '{who}' is not registered".format(monid=monitor.identity,
+				  who=monitoree))
+			except KeyError:
+				module_logger.error("No monitors are registered for entity '{who}'".format(monid=monitor.identity,
+				  who=monitoree))
+
+			module_logger.info("Deregistered monitor '{monid}' for entity '{who}'".format(monid=monitor.identity,
 			  who=monitoree))
-		except KeyError:
-			module_logger.error("No monitors are registered for entity '{who}'".format(monid=monitor.identity,
-			  who=monitoree))
-
-		module_logger.info("Deregistered monitor '{monid}' for entity '{who}'".format(monid=monitor.identity,
-		  who=monitoree))
-
-		# Release lock
-		_register_lock.release()
 
 class MonitorStopped(Exception):
 	pass
@@ -152,13 +146,10 @@ class R2dbeMonitor(Thread):
 
 	def _is_stopped(self):
 		# Acquire lock
-		self._lock.acquire(True)
+		with self._lock:
 
-		# Read the stop flag
-		stop = self._stop
-
-		# Release lock
-		self._lock.release()
+			# Read the stop flag
+			stop = self._stop
 
 		return stop
 
@@ -314,13 +305,10 @@ class R2dbeMonitor(Thread):
 
 	def set_stop(self):
 		# Acquire lock
-		self._lock.acquire(True)
+		with self._lock:
 
-		# Set the stop flag
-		self._stop = True
-
-		# Release lock
-		self._lock.release()
+			# Set the stop flag
+			self._stop = True
 
 	def run(self):
 

@@ -33,9 +33,9 @@ def handle_close(evt):
 	global _stop
 
 	# Acquire lock and set stop condition
-	_stop_lock.acquire()
-	_stop = True
-	_stop_lock.release()
+	with _stop_lock:
+
+		_stop = True
 
 class Panel(object):
 
@@ -479,9 +479,9 @@ if __name__ == "__main__":
 		pause(0.001)
 
 		# Check if stop condition set
-		_stop_lock.acquire()
-		is_stopped = _stop
-		_stop_lock.release()
+		with _stop_lock:
+
+			is_stopped = _stop
 
 		# If stopped, terminate
 		if is_stopped:
