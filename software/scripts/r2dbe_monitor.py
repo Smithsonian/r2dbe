@@ -21,7 +21,6 @@ from mandc.r2dbe import (
   R2DBE_OUTPUTS,
 )
 
-
 _color_map = ["b", "g"]
 
 _stop_lock = Semaphore()
@@ -38,12 +37,15 @@ def handle_close(evt):
 
 class Panel(object):
 
-	def __init__(self, axes, source):
+	def __init__(self, axes, source, parent_logger=logging.getLogger(__file__)):
 		# Set axes
 		self._axes = axes
 
 		# Set data source
 		self._source = source
+
+		# Set logger
+		self.logger = logging.getLogger("{name}".format(name=".".join((parent_logger.name, self.__class__.__name__))))
 
 	def retrieve_data(self, key):
 		raw = self._source.get(key)
@@ -56,10 +58,10 @@ class Panel(object):
 class HistogramPanel(Panel):
 
 	def __init__(self, axes, source, key_bin, key_height, xlim=None, ylim=None, bin_width=0.5, color="b",
-	  auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None):
+	  auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None, **kwargs):
 
 		# Generic Panel
-		super(HistogramPanel, self).__init__(axes, source)
+		super(HistogramPanel, self).__init__(axes, source, **kwargs)
 
 		# Set data source keys
 		self._key_b = key_bin
@@ -92,7 +94,7 @@ class HistogramPanel(Panel):
 		# Check if None returned
 		if any([p is None for p in [proxy_b, proxy_h]]):
 			# Do not update, maybe log
-			print "One or more data retrievals failed"
+			self.logger.warn("Missing data for certain attributes, not updating panel")
 			return
 
 		# Data received, carry on
@@ -123,10 +125,10 @@ class HistogramPanel(Panel):
 class LinePanel(Panel):
 
 	def __init__(self, axes, source, keys_x, keys_y, xlim=None, ylim=None, color_map=["b", "g", "r", "c", "y", "m", "k"],
-	  grid=False, title=None, xlabel=None, ylabel=None, line_labels=None, xconv=None, yconv=None):
+	  grid=False, title=None, xlabel=None, ylabel=None, line_labels=None, xconv=None, yconv=None, **kwargs):
 
 		# Generic Panel
-		super(LinePanel, self).__init__(axes, source)
+		super(LinePanel, self).__init__(axes, source, **kwargs)
 
 		# Set data source keys
 		self._keys_x = keys_x
@@ -161,8 +163,7 @@ class LinePanel(Panel):
 
 		# Check if None returned
 		if any([x is None for x in proxy_x]) or any([y is None for y in proxy_y]):
-			# Do not update, maybe log
-			print "One or more data retrievals failed"
+			self.logger.warn("Missing data for certain attributes, not updating panel")
 			return
 
 		# Data received, apply conversion functions
@@ -193,10 +194,10 @@ class LinePanel(Panel):
 
 class TextInfoPanel(Panel):
 
-	def __init__(self, axes, source, r2dbe_host):
+	def __init__(self, axes, source, r2dbe_host, **kwargs):
 
 		# Generic Panel
-		super(TextInfoPanel, self).__init__(axes, source)
+		super(TextInfoPanel, self).__init__(axes, source, **kwargs)
 
 		# Set R2DBE hostname
 		self._r2dbe_host = r2dbe_host
@@ -256,7 +257,7 @@ class TextInfoPanel(Panel):
 		# Retrieve necessary data
 		proxy_values = [self.retrieve_data(k) for k in self._keys]
 		if any([v is None for v in proxy_values]):
-			print "One or more data retrievals failed"
+			self.logger.warn("Missing data for certain attributes, not updating panel")
 			return
 
 		values = dict(zip(self._names, proxy_values))
@@ -294,10 +295,14 @@ class TextInfoPanel(Panel):
 
 class DisplayR2dbeMonitor(object):
 
-	def __init__(self, r2dbe_host, redis_source, rows=2, cols=4):
+	def __init__(self, r2dbe_host, redis_source, rows=2, cols=4, parent_logger=logging.getLogger(__file__)):
 
 		# Set R2DBE host
 		self._r2dbe_host = r2dbe_host
+
+		# Set logger
+		self.logger = logging.getLogger("{name}[{host}]".format(name=".".join((parent_logger.name,
+		  self.__class__.__name__)), host=self._r2dbe_host))
 
 		# Set redis
 		self._redis = redis_source
@@ -327,7 +332,7 @@ class DisplayR2dbeMonitor(object):
 		axes = self._fig.add_subplot(self._rows, self._cols, order)
 
 		# Instantiate panel object
-		panel = cls(axes, self._redis, *args, **kwargs)
+		panel = cls(axes, self._redis, parent_logger=self.logger, *args, **kwargs)
 
 		# Add to panel list
 		self._panels.append(panel)
