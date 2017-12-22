@@ -123,6 +123,7 @@ class ExceptingStoppableThread(StoppableThread):
 		try:
 			# Just execute the parent class' run() method
 			super(ExceptingStoppableThread, self).run()
+
 		except:
 			# Get last exception
 			exc = sys.exc_info()
@@ -135,6 +136,9 @@ class ExceptingStoppableThread(StoppableThread):
 
 			# Add to queue
 			self._exception_queue.put((self.name, exc))
+
+			# Mark the thread as stopped
+			self.stop()
 
 class QueuedEventProcessor(ExceptingStoppableThread):
 	def __init__(self, *args, **kwargs):
