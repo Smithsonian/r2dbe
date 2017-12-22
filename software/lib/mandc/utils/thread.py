@@ -9,7 +9,7 @@ from traceback import format_exception, format_exception_only
 
 module_logger = logging.getLogger(__name__)
 
-class Event(object):
+class Action(object):
 	def __init__(self, func, *args, **kwargs):
 
 		# Store function and arguments as partial
@@ -140,26 +140,26 @@ class ExceptingStoppableThread(StoppableThread):
 			# Mark the thread as stopped
 			self.stop()
 
-class QueuedEventProcessor(ExceptingStoppableThread):
+class QueuedActionProcessor(ExceptingStoppableThread):
 	def __init__(self, *args, **kwargs):
-		super(QueuedEventProcessor, self).__init__(*args, **kwargs)
+		super(QueuedActionProcessor, self).__init__(*args, **kwargs)
 
 		# Create a queue
-		self._event_queue = Queue()
+		self._action_queue = Queue()
 
-	def enqueue(self, event):
-		# If thread already stopped, do not accept any more events
+	def enqueue(self, action):
+		# If thread already stopped, do not accept any more actions
 		if self.stopped:
-			raise RuntimeError("Cannot enqueue events after {cls} has been stopped.".format(cls=self.__class__.__name__))
+			raise RuntimeError("Cannot enqueue actions after {cls} has been stopped.".format(cls=self.__class__.__name__))
 		
-		self._event_queue.put(event)
+		self._action_queue.put(action)
 
 	def in_run_loop_pre_stop(self):
 
 		try:
-			# Process any waiting events
-			event = self._event_queue.get_nowait()
-			event.do()
+			# Process any waiting action
+			action = self._action_queue.get_nowait()
+			action.do()
 
 		except Empty:
 			# Nothing to do
@@ -170,25 +170,25 @@ class QueuedEventProcessor(ExceptingStoppableThread):
 		# Wait a while
 		sleep(0.001)
 
-class EventScheduler(ExceptingStoppableThread):
-	def __init__(self, event, processor, interval, num_repeat, *args, **kwargs):
-		super(EventScheduler, self).__init__(*args, **kwargs)
+class ActionScheduler(ExceptingStoppableThread):
+	def __init__(self, action, processor, interval, num_repeat, *args, **kwargs):
+		super(ActionScheduler, self).__init__(*args, **kwargs)
 
-		# This is the Event to schedule
-		self._event = event
+		# This is the Action to schedule
+		self._action = action
 
-		# This is the QueuedEventProcessor
+		# This is the QueuedActionProcessor
 		self._processor = processor
 
-		# Enqueue the Event every interval seconds
+		# Enqueue the Action every interval seconds
 		self._interval = interval
 
-		# Enqueue the Event in total num_repeat times, or indefinitely if < 0
+		# Enqueue the Action in total num_repeat times, or indefinitely if < 0
 		self._num_repeat = num_repeat
 
 	def in_run_loop_pre_stop(self):
 		# Sleep for the interval *before* checking stop condition (if sleeping after stop condition check, we allow ample
-		# time for stop requests that can only be served after attempting to enqueue one more event)
+		# time for stop requests that can only be served after attempting to enqueue one more action)
 		sleep(self._interval)
 
 	def in_run_loop_post_stop(self):
@@ -196,8 +196,8 @@ class EventScheduler(ExceptingStoppableThread):
 		if self._num_repeat == 0:
 			return True
 
-		# Enqueue event
-		self._processor.enqueue(self._event)
+		# Enqueue action
+		self._processor.enqueue(self._action)
 
 		# Decrement repeats left if not indefinite
 		if self._num_repeat > 0:

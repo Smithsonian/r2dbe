@@ -3,8 +3,8 @@ from daemon import (
 )
 
 from thread import (
-  Event,
-  EventScheduler,
+  Action,
+  ActionScheduler,
   ExceptingThread,
-  QueuedEventProcessor,
+  QueuedActionProcessor,
 )
