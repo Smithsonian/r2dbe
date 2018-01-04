@@ -103,8 +103,7 @@ class Daemon(object):
 		pid = self._get_pid_from_file()
 
 		if pid:
-			message = "pidfile %s already exist. Daemon already running?\n"
-			self.logger.warn(message % self.pidfile)
+			self._message("pidfile %s already exist. Daemon already running?\n" % self.pidfile)
 			sys.exit(1)
 	   
 		# Start the daemon
@@ -116,8 +115,7 @@ class Daemon(object):
 		pid = self._get_pid_from_file()
 
 		if not pid:
-			message = "pidfile %s does not exist. Daemon not running?\n"
-			self.logger.warn(message % self.pidfile)
+			self._message("pidfile %s does not exist. Daemon not running?\n" % self.pidfile)
 			return # not an error in a restart
 
 		self._kill(pid, SIGTERM)
