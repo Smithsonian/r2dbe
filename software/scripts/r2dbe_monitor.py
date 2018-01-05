@@ -59,8 +59,8 @@ class Panel(object):
 
 class HistogramPanel(Panel):
 
-	def __init__(self, axes, source, key_bin, key_height, xlim=None, ylim=None, bin_width=0.5, color="b",
-	  auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None, **kwargs):
+	def __init__(self, axes, source, key_bin, key_height, xlim=None, ylim=None, xticks=None, yticks=None, bin_width=0.5,
+	  color="b", auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None, **kwargs):
 
 		# Generic Panel
 		super(HistogramPanel, self).__init__(axes, source, **kwargs)
@@ -74,6 +74,10 @@ class HistogramPanel(Panel):
 			self._axes.set_xlim(xlim)
 		if ylim is not None:
 			self._axes.set_ylim(ylim)
+		if xticks is not None:
+			self._axes.set_xticks(xticks)
+		if yticks is not None:
+			self._axes.set_yticks(yticks)
 		if grid:
 			self._axes.grid()
 		if title is not None:
@@ -126,8 +130,9 @@ class HistogramPanel(Panel):
 
 class LinePanel(Panel):
 
-	def __init__(self, axes, source, keys_x, keys_y, xlim=None, ylim=None, color_map=["b", "g", "r", "c", "y", "m", "k"],
-	  grid=False, title=None, xlabel=None, ylabel=None, line_labels=None, xconv=None, yconv=None, **kwargs):
+	def __init__(self, axes, source, keys_x, keys_y, xlim=None, ylim=None, xticks=None, yticks=None,
+	  color_map=["b", "g", "r", "c", "y", "m", "k"], grid=False, title=None, xlabel=None, ylabel=None, line_labels=None,
+	  xconv=None, yconv=None, **kwargs):
 
 		# Generic Panel
 		super(LinePanel, self).__init__(axes, source, **kwargs)
@@ -141,6 +146,10 @@ class LinePanel(Panel):
 			self._axes.set_xlim(xlim)
 		if ylim is not None:
 			self._axes.set_ylim(ylim)
+		if xticks is not None:
+			self._axes.set_xticks(xticks)
+		if yticks is not None:
+			self._axes.set_yticks(yticks)
 		if grid:
 			self._axes.grid()
 		if title is not None:
@@ -427,7 +436,7 @@ if __name__ == "__main__":
 		  arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
 		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_8BIT_COUNTS, arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
 		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
-		  xlabel="Sample state", ylabel="Fraction")
+		  xlabel="Sample state", ylabel="Fraction", xticks=[-128, -64, 0, 64, 127])
 
 	# Add 8-bit spectral density panel
 	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_FREQUENCY,
@@ -437,6 +446,7 @@ if __name__ == "__main__":
 	title_str = "{attr}".format(attr=R2DBE_ATTR_SNAP_8BIT_DENSITY)
 	drm.add_panel(drm.next_order, LinePanel, keys_x, keys_y, color_map=_color_map, title=title_str,
 	  xlabel="Frequency [MHz]", ylabel="Normalized spectral density [dB]",
+	  xlim=[0, 2048], xticks=[0, 1024, 2048],
 	  xconv=lambda x: x/1e6, yconv=lambda y: 20*log10(abs(y)/max(abs(y))),
 	  line_labels=["{arg}".format(arg=R2DBE_ARG_SNAP_8BIT_DENSITY % inp) for inp in R2DBE_INPUTS])
 
@@ -451,7 +461,7 @@ if __name__ == "__main__":
 		  arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
 		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_2BIT_COUNTS, arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
 		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
-		  xlabel="Sample state", ylabel="Fraction")
+		  xlabel="Sample state", ylabel="Fraction", xticks=[-2, -1, 0, 1])
 
 	# 2-bit spectral density panels
 	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_FREQUENCY,
@@ -461,6 +471,7 @@ if __name__ == "__main__":
 	title_str = "{attr}".format(attr=R2DBE_ATTR_SNAP_2BIT_DENSITY)
 	line_panel = drm.add_panel(drm.next_order, LinePanel, keys_x, keys_y, color_map=_color_map, title=title_str,
 	  xlabel="Frequency [MHz]", ylabel="Normalized spectral density [dB]",
+	  xlim=[0, 2048], xticks=[0, 1024, 2048],
 	  xconv=lambda x: x/1e6, yconv=lambda y: 20*log10(abs(y)/max(abs(y))),
 	  line_labels=["{arg}".format(arg=R2DBE_ARG_SNAP_8BIT_DENSITY % inp) for inp in R2DBE_INPUTS])
 
