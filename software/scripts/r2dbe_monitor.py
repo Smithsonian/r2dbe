@@ -240,6 +240,11 @@ class TextInfoPanel(Panel):
 			  (R2DBE_ATTR_VDIF_RECEIVER_SIDEBAND, R2DBE_ARG_VDIF_POLARIZATION % inp),
 			  (R2DBE_ATTR_VDIF_BDC_SIDEBAND, R2DBE_ARG_VDIF_BDC_SIDEBAND % inp)
 			]])
+		# Add snap group keys
+		for inp in R2DBE_INPUTS:
+			keys.extend([build_key(R2DBE_MCLASS, self._r2dbe_host, R2DBE_GROUP_SNAP, attr, arg=arg) for attr, arg in [
+			  (R2DBE_ATTR_SNAP_2BIT_THRESHOLD, R2DBE_ARG_SNAP_2BIT_THRESHOLD % inp),
+			]])
 		# Add Time group keys
 		keys.extend([build_key(R2DBE_MCLASS, self._r2dbe_host, R2DBE_GROUP_TIME, attr, arg=None) for attr in [
 		  R2DBE_ATTR_TIME_NOW,
@@ -275,8 +280,31 @@ class TextInfoPanel(Panel):
 
 		# Build lines to display
 		lines = []
+		# Add some spacing
+		for ii in range(3):
+			lines.append(" ")
 		# Display R2DBE hostname
 		lines.append("R2DBE host: {0}".format(self._r2dbe_host))
+		# Add a break
+		lines.append("_________________________________________________")
+		# Add some spacing
+		for ii in range(2):
+			lines.append(" ")
+		# Display current time
+		time_name = self._build_name(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_NOW)
+		time_str = values[time_name]
+		lines.append("Current time: {0}".format(time_str))
+		# Display external PPS vs internal PPS offset
+		pps_clk_off_name = self._build_name(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_GPS_PPS_OFFSET_CYCLE)
+		pps_clk_off_str = values[pps_clk_off_name]
+		pps_sec_off_name = self._build_name(R2DBE_GROUP_TIME, R2DBE_ATTR_TIME_GPS_PPS_OFFSET_TIME)
+		pps_sec_off_str = values[pps_sec_off_name]
+		lines.append("External vs internal PPS offset is:")
+		lines.append("              {clk} cycles @ FPGA clock rate".format(clk=pps_clk_off_str))
+		lines.append("              {sec:.2f} ns".format(sec=pps_sec_off_str / 1e-9))
+		# Add some spacing
+		for ii in range(2):
+			lines.append(" ")
 		# Per-input lines
 		for inp in R2DBE_INPUTS:
 			# Display IF signal parameters and station code
@@ -289,17 +317,27 @@ class TextInfoPanel(Panel):
 			bdc_str = values[bdc_name].split("=")[-1]
 			stid_name = self._build_name(R2DBE_GROUP_VDIF, R2DBE_ATTR_VDIF_STATION, R2DBE_ARG_VDIF_STATION % inp)
 			stid_str = values[stid_name]
-			lines.append("IF{inp}: Pol={pol}, Rx={rx}, BDC={bdc}, Station={stid}".format(inp=inp,
-			  pol=pol_str, rx=rx_str, bdc=bdc_str, stid=stid_str))
+			lines.append("IF{inp}:".format(inp=inp))
+			lines.append("----")
+			lines.append("Pol={pol}, Rx={rx}, BDC={bdc}, Station={stid}".format(pol=pol_str, rx=rx_str, bdc=bdc_str, stid=stid_str))
 			# 2-bit quantization threshold
-			# TODO
+			th_name = self._build_name(R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_THRESHOLD, R2DBE_ARG_SNAP_2BIT_THRESHOLD % inp)
+			th_str = values[th_name]
+			lines.append("2-bit threshold = {0}".format(th_str))
+			# Add some spacing between channels
+			for ii in range(5):
+				lines.append(" ")
+		# Add some more spacing
+		for ii in range(14):
+			lines.append(" ")
 
 		if not hasattr(self, "_annotates"):
+			self._annotates = []
 			dy = 1.0 * self._full_y / len(lines)
 			x0 = self._left_x + self._full_x / 20.0
 			for ii, line in enumerate(lines):
 				y = self._top_y - (ii + 0.5)*dy
-				self._axes.annotate(line, xy=(x0, y))
+				self._annotates.append(self._axes.annotate(line, xy=(x0, y)))
 		else:
 			for an, line in zip(self._annotates, lines):
 				an.set_text(line)
