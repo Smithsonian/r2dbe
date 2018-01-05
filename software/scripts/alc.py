@@ -7,8 +7,6 @@ import sys
 
 from numpy import log10, sqrt
 
-from mandc import Station
-
 from mandc.r2dbe import R2dbe, R2DBE_INPUTS
 
 IDEAL_THRESHOLD = 30
@@ -94,10 +92,5 @@ if __name__ == "__main__":
 	# Estimate required change in input power for optimal setting
 	d_pwr = [(IDEAL_THRESHOLD / (1.0 * t))**2 for t in th]
 	d_pwr_dB = [10.0 * log10(d) for d in d_pwr]
-	for ii, dp in enumerate(d_pwr_dB):
-		# if change in power is less than 0.25 dB set to zero
-		if abs(dp) < 0.25:
-			d_pwr_dB[ii] = 0
-
 	logger.info("Recommended change in input power for {host!r} is if0 = {dp[0]:+.2f} dB, if1 = {dp[1]:+.2f} dB".format(
 	  host=r2dbe, dp=d_pwr_dB))
