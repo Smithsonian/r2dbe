@@ -39,7 +39,7 @@ def adj_core_offsets(roach2, zdok, diff_offsets_lsb):
 	# Set updated offsets
 	set_core_offsets(roach2, zdok, offsets_lsb)
 
-	return offsets_lsb
+	return get_core_offsets(roach2, zdok)
 
 def set_core_gains(roach2, zdok, gains):
 	for core_n, gain_n in enumerate(gains):
@@ -63,4 +63,4 @@ def adj_core_gains(roach2, zdok, diff_gains):
 	# Set updated gains
 	set_core_gains(roach2, zdok, gains)
 
-	return gains
+	return get_core_gains(roach2, zdok)

@@ -236,14 +236,14 @@ class R2dbe(Roach2):
 		# Compute gain adjustment per core
 		gain_adj = 100*(1.0 - std_0 / std_ref) * curb_gain_step
 
-		# Store best offset / gain parameters
+		# Store best gain parameters
 		best_gains = gains_0
 		best_gains_adj = abs(gain_adj)
 		best_gains_std = std_0
 
 		# Feed back initial gain adjustment
 		curr_gains = adc.adj_core_gains(self.roach2, input_n, gain_adj)
-		self.logger.debug("Initial gain adjustments for ADC{0} are [{1}] % (updated values are [{2}] %)".format(input_n,
+		self.logger.debug("Initial gain adjustments for ADC{0} are [{1}] % (updated gains are [{2}] %)".format(input_n,
 		  ", ".join(["{0:+.3f}".format(a) for a in gain_adj]), ", ".join(["{0:+.3f}".format(g) for g in curr_gains])))
 
 		# Now iterate until gain solution converges
@@ -279,7 +279,7 @@ class R2dbe(Roach2):
 			# Feed back update
 			curr_gains = adc.adj_core_gains(self.roach2, input_n, gain_adj)
 
-			self.logger.debug("Updated gain adjustments for ADC{0} are [{1}] % (updated values are [{2}] %)".format(input_n,
+			self.logger.debug("Updated gain adjustments for ADC{0} are [{1}] % (updated gains are [{2}] %)".format(input_n,
 			  ", ".join(["{0:+.3f}".format(a) for a in gain_adj]),
 			  ", ".join(["{0:+.3f}".format(g) for g in curr_gains])))
 
@@ -288,10 +288,11 @@ class R2dbe(Roach2):
 			if tries >= max_iter:
 				self.logger.warn("Maximum number of iterations for ADC{0} core gain cal reached, using best result".format(
 				  input_n))
+				adc.set_core_gains(self.roach2, input_n, best_gains)
 				break
 
 		self.logger.debug("ADC{0} core gain solution: [{1}] (standard deviations were [{2}])".format(input_n,
-		  ", ".join(["{0:+.3f}".format(g) for g in best_gains]),
+		  ", ".join(["{0:+.3f}".format(g) for g in adc.get_core_gains(self.roach2, input_n)]),
 		  ", ".join(["{0:+.3f}".format(s) for s in best_gains_std])))
 
 		# Reset core offset parameters
@@ -313,14 +314,14 @@ class R2dbe(Roach2):
 		# Compute offset adjustment per core
 		offset_adj = -mean_0 * curb_offset_step
 
-		# Store best offset / gain parameters
+		# Store best offset parameters
 		best_offsets = offsets_0
 		best_offsets_adj = abs(offset_adj)
 		best_offsets_mean = mean_0
 
 		# Feed back initial gain adjustment
 		curr_offsets = adc.adj_core_offsets(self.roach2, input_n, offset_adj)
-		self.logger.debug("Initial offset adjustments for ADC{0} are [{1}] (updated values are [{2}])".format(input_n,
+		self.logger.debug("Initial offset adjustments for ADC{0} are [{1}] (updated offsets are [{2}])".format(input_n,
 		  ", ".join(["{0:+.3f}".format(a) for a in offset_adj]),
 		  ", ".join(["{0:+.3f}".format(o) for o in curr_offsets])))
 
@@ -349,7 +350,7 @@ class R2dbe(Roach2):
 					best_offsets_adj[ii] = offset_adj[ii]
 					best_offsets_mean[ii] = mean_u[ii]
 
-			# If gain adjustments are zero, exit
+			# If offset adjustments are zero, exit
 			if (offset_adj == 0).all():
 				self.logger.debug("ADC{0} core offset solution converged".format(input_n))
 				break
@@ -357,7 +358,7 @@ class R2dbe(Roach2):
 			# Feed back update
 			curr_offsets = adc.adj_core_offsets(self.roach2, input_n, offset_adj)
 
-			self.logger.debug("Updated offset adjustments for ADC{0} are [{1}] (updated values are [{2}])".format(input_n,
+			self.logger.debug("Updated offset adjustments for ADC{0} are [{1}] (updated offsets are [{2}])".format(input_n,
 			  ", ".join(["{0:+.3f}".format(a) for a in offset_adj]),
 			  ", ".join(["{0:+.3f}".format(o) for o in curr_offsets])))
 
@@ -366,10 +367,11 @@ class R2dbe(Roach2):
 			if tries >= max_iter:
 				self.logger.warn("Maximum number of iterations for ADC{0} core offset cal reached, using best result".format(
 				  input_n))
+				adc.set_core_offsets(self.roach2, input_n, best_offsets)
 				break
 
 		self.logger.debug("ADC{0} core offset solution: [{1}] (means were [{2}])".format(input_n,
-		  ", ".join(["{0:+.3f}".format(o) for o in best_offsets]),
+		  ", ".join(["{0:+.3f}".format(o) for o in adc.get_core_offsets(self.roach2, input_n)]),
 		  ", ".join(["{0:+.3f}".format(m) for m in best_offsets_mean])))
 
 	def arm_one_pps(self):
