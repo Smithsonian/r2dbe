@@ -25,7 +25,7 @@ from mandc.r2dbe import (
 
 IDEAL_THRESHOLD = 30
 
-_color_map = ["b", "g"]
+_color_map = [[0.3, 0.3, 1.0], [0.15, 0.7, 0.15]]
 
 _stop_lock = Semaphore()
 _stop = False
@@ -65,7 +65,8 @@ class Panel(object):
 class HistogramPanel(Panel):
 
 	def __init__(self, axes, source, key_bin, key_height, xlim=None, ylim=None, xticks=None, yticks=None, bin_width=0.5,
-	  color="b", auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None, **kwargs):
+	  color="b", auto_xtick=False, auto_ytick=False, grid=False, title=None, xlabel=None, ylabel=None,
+	  annotate_fractions=False, **kwargs):
 
 		# Generic Panel
 		super(HistogramPanel, self).__init__(axes, source, **kwargs)
@@ -91,6 +92,7 @@ class HistogramPanel(Panel):
 			self._axes.set_xlabel(xlabel)
 		if ylabel is not None:
 			self._axes.set_ylabel(ylabel)
+		self._annotate_fractions = annotate_fractions
 		self._auto_xtick = auto_xtick
 		self._auto_ytick = auto_ytick
 		self._bin_width = bin_width
@@ -128,6 +130,16 @@ class HistogramPanel(Panel):
 				bar.set_x(b - self._bin_width / 2.0)
 				bar.set_width(self._bin_width)
 				bar.set_color(self._color)
+
+		# If fractions should be shown as annotations
+		if self._annotate_fractions:
+			if not hasattr(self, "_annotates"):
+				self._annotates = []
+				for b, new_height in zip(self._data_b, self._data_h):
+					self._annotates.append(self._axes.annotate("{0:.1f}%".format(new_height*100.0), xy=(b-0.5, 0.1)))
+			else:
+				for an, b, new_height in zip(self._annotates, self._data_b, self._data_h):
+					an.set_text("{0:.1f}%".format(new_height*100.0))
 
 		# Update
 		for b, new_height, bar in zip(self._data_b, self._data_h, self._bars):
@@ -193,7 +205,7 @@ class LinePanel(Panel):
 
 		# If not plotted yet, initiate
 		if not hasattr(self, "_lines"):
-			self._lines = [self._axes.plot(x, y, c)[0] for x, y, c in zip(self._datas_x, self._datas_y, self._colors)]
+			self._lines = [self._axes.plot(x, y, color=c)[0] for x, y, c in zip(self._datas_x, self._datas_y, self._colors)]
 
 		# If line labels, set them
 		if hasattr(self, "_line_labels"):
@@ -507,7 +519,7 @@ if __name__ == "__main__":
 		  arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
 		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_2BIT_COUNTS, arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
 		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
-		  xlabel="Sample state", ylabel="Fraction", xticks=[-2, -1, 0, 1], ylim=(0.0, 0.5))
+		  xlabel="Sample state", ylabel="Fraction", xticks=[-2, -1, 0, 1], ylim=(0.0, 0.5), annotate_fractions=True)
 
 	# 2-bit spectral density panels
 	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_FREQUENCY,
