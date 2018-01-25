@@ -7,7 +7,7 @@ import sys
 
 from datetime import datetime
 from matplotlib.pyplot import figure, ion, pause
-from numpy import abs, log10
+from numpy import abs, arange, exp, log10, pi, sqrt
 from redis import StrictRedis
 from time import sleep
 from threading import Semaphore
@@ -22,6 +22,8 @@ from mandc.r2dbe import (
   R2DBE_INPUTS,
   R2DBE_OUTPUTS,
 )
+
+IDEAL_THRESHOLD = 30
 
 _color_map = ["b", "g"]
 
@@ -48,6 +50,9 @@ class Panel(object):
 
 		# Set logger
 		self.logger = logging.getLogger("{name}".format(name=".".join((parent_logger.name, self.__class__.__name__))))
+
+	def plot(self, *args, **kwargs):
+		self._axes.plot(*args, **kwargs)
 
 	def retrieve_data(self, key):
 		raw = self._source.get(key)
@@ -467,14 +472,17 @@ if __name__ == "__main__":
 	ion()
 
 	# Add 8-bit state histogram panels
+	x_gauss = arange(-128, 127, 0.1)
+	y_gauss = exp(-(x_gauss**2)/IDEAL_THRESHOLD**2/2.0) / sqrt(2.0*pi*IDEAL_THRESHOLD**2)
 	for ii, inp in enumerate(R2DBE_INPUTS):
 		key_b = build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_VALUES,
 		  arg=R2DBE_ARG_SNAP_8BIT_VALUES % inp)
 		key_h = build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_COUNTS,
 		  arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
 		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_8BIT_COUNTS, arg=R2DBE_ARG_SNAP_8BIT_COUNTS % inp)
-		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
-		  xlabel="Sample state", ylabel="Fraction", xticks=[-128, -64, 0, 64, 127])
+		panel_8bit = drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
+		  xlabel="Sample state", ylabel="Fraction", xticks=[-128, -64, 0, 64, 127], ylim=(0.0, 0.05))
+		panel_8bit.plot(x_gauss, y_gauss, color=[0.5,0.5,0.5])
 
 	# Add 8-bit spectral density panel
 	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_8BIT_FREQUENCY,
@@ -499,7 +507,7 @@ if __name__ == "__main__":
 		  arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
 		title_str = "{attr}:{arg}".format(attr=R2DBE_ATTR_SNAP_2BIT_COUNTS, arg=R2DBE_ARG_SNAP_2BIT_COUNTS % inp)
 		drm.add_panel(drm.next_order, HistogramPanel, key_b, key_h, color=_color_map[ii], title=title_str,
-		  xlabel="Sample state", ylabel="Fraction", xticks=[-2, -1, 0, 1])
+		  xlabel="Sample state", ylabel="Fraction", xticks=[-2, -1, 0, 1], ylim=(0.0, 0.5))
 
 	# 2-bit spectral density panels
 	keys_x = [build_key(R2DBE_MCLASS, args.r2dbe_host, R2DBE_GROUP_SNAP, R2DBE_ATTR_SNAP_2BIT_FREQUENCY,
