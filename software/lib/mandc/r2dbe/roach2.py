@@ -67,7 +67,7 @@ class Roach2(object):
 		tries = 0
 		while True:
 			try:
-				snaps = snapshots_get([self.roach2] * len(names), names)
+				snaps = snapshots_get([self.roach2] * len(names), names, man_trig=True)
 				return snaps
 			except RuntimeError as runtime_error:
 				self.logger.error(
