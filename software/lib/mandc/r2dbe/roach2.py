@@ -141,7 +141,7 @@ class R2dbe(Roach2):
 		raw_int = array(unpack(R2DBE_POWER_BUFFER_FMT % R2DBE_POWER_BUFFER_NMEM, raw_bin), dtype=uint64)
 		msc = (raw_int >> R2DBE_POWER_RSHIFT_MSC) & R2DBE_POWER_MASK_MSC
 		sec = (raw_int >> R2DBE_POWER_RSHIFT_SEC) & R2DBE_POWER_MASK_SEC
-		pwr = (raw_int >> R2DBE_POWER_RSHIFT_SEC) & R2DBE_POWER_MASK_SEC
+		pwr = (raw_int >> R2DBE_POWER_RSHIFT_PWR) & R2DBE_POWER_MASK_PWR
 
 		# Apply time offset to absolute reference
 		sec = self._offset_alive_sec(sec)
