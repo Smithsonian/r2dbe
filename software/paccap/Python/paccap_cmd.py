@@ -12,5 +12,7 @@ if __name__ == "__main__":
 
 	# send each line on stdin
 	for ln in sys.stdin.readlines():
-		sock.sendto(ln.strip(),(socket.gethostbyname(SRV_DEFAULT_HOST),SRV_DEFAULT_PORT))
+		snd_size = sock.sendto(ln.strip(),(socket.gethostbyname(SRV_DEFAULT_HOST),SRV_DEFAULT_PORT))
+		if snd_size < 0:
+			sys.stderr.write("Send to {sock} failed".format((socket.gethostbyname(SRV_DEFAULT_HOST),SRV_DEFAULT_PORT)))
 
