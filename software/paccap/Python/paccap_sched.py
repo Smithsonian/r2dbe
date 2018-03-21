@@ -9,7 +9,7 @@ from time import sleep
 import xml.etree.ElementTree as ET
 
 RECORD_COMMAND_TEMPLATE='record={0}:{1}:{2}:{3}:{4}:{5};'
-SEND_TO_PACCAP_CMD_TEMPLATE = 'echo \'{0}\' | ./paccap_cmd.py'
+SEND_TO_PACCAP_CMD_TEMPLATE = 'echo \'{0}\' | paccap_cmd.py'
 
 SCAN_TIME_FMT = '%Yy%jd%Hh%Mm%Ss'
 SCAN_NAME_FMT = '%j-%H%M%S'
