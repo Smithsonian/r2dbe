@@ -2,7 +2,7 @@
 import argparse
 
 import json
-import netifaces as ni
+#import netifaces as ni
 
 from datetime import datetime, time, timedelta
 from tempfile import NamedTemporaryFile
@@ -233,15 +233,16 @@ def configure_backend_pair(qid,sideband,sdbe,mark6,
 		roach2.write_int(dev_name,thread_id[ii])
 
 	# write station code
-	station_id_2code = ord(config['station_id'][0])*2**8 + ord(config['station_id'][1])
+	#station_id_2code = ord(config['station_id'][0])*2**8 + ord(config['station_id'][1])
+	station_id_2code = ord('S')*2**8 + ord(str(qid))
 	for ii in range(0,4):
 		dev_name = 'vdif_%d_hdr_w3_station_id' % ii
 		roach2.write_int(dev_name,station_id_2code)
 
 	# select test data 
-	for ii in range(0,4):
-		dev_name = 'vdif_%d_test_sel' % ii
-		roach2.write_int(dev_name, is_test)
+#	for ii in range(0,4):
+#		dev_name = 'vdif_%d_test_sel' % ii
+#		roach2.write_int(dev_name, is_test)
 
 	# use little endian word order
 	for ii in range(0,4):
