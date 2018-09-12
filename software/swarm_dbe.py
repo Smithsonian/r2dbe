@@ -113,12 +113,12 @@ def configure_backend_pair(qid,sideband,sdbe,mark6,
 
 	roach2.wait_connected(timeout)
 	if verbose > 2:
-		print 'connected'
+		print 'connected to {sdbe}'.format(sdbe=sdbe)
 
 	roach2.progdev(boffile)
 	roach2.wait_connected(timeout)
 	if args.verbose > 2:
-		print 'progdevd'
+		print 'progdevd with {bof}'.format(bof=boffile)
 
 	# arm the one pps
 	roach2.write_int('onepps_ctrl', 1<<31)
@@ -234,7 +234,8 @@ def configure_backend_pair(qid,sideband,sdbe,mark6,
 
 	# write station code
 	#station_id_2code = ord(config['station_id'][0])*2**8 + ord(config['station_id'][1])
-	station_id_2code = ord('S')*2**8 + ord(str(qid))
+	station_id_2code = ord(str(qid))*2**8 + ord(sideband[0]) #ord(ord('S')*2**8 + ord(str(qid))
+	print "station code is {0}{1}".format(chr(station_id_2code>>8),chr(station_id_2code & 0xFF))
 	for ii in range(0,4):
 		dev_name = 'vdif_%d_hdr_w3_station_id' % ii
 		roach2.write_int(dev_name,station_id_2code)
