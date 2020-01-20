@@ -97,17 +97,17 @@ def corr_Xt_search(X0,X1,fft_window_size=32768,search_range=None,search_avg=1):
 	X0,X1 are assumed to contain only positive-frequency half-spectra.
 	"""
 	
-	snapshots_center = X0.shape[0]/2 - search_avg/2
+	snapshots_center = X0.shape[0]//2 - search_avg//2
 	#~ print "snapshots_center = %d" % snapshots_center
 	if search_range is None:
 		search_range = zeros(1)
 	
 	s_peaks = zeros(len(search_range))
 	s_0x1 = zeros([len(search_range),fft_window_size],dtype=float64)
-	S_0x1 = zeros([len(search_range),fft_window_size/2],dtype=complex64)
+	S_0x1 = zeros([len(search_range),fft_window_size//2],dtype=complex64)
 	ii = 0
 	for iwindow in search_range:
-		#~ print "X0(%d,%d) and X1(%d,%d)" % (snapshots_center,snapshots_center+search_avg,snapshots_center+iwindow,snapshots_center+iwindow+search_avg)
+		#~ print("X0(%d,%d) and X1(%d,%d) [X0.shape=%s, X1.shape=%s]" % (snapshots_center,snapshots_center+search_avg,snapshots_center+iwindow,snapshots_center+iwindow+search_avg, str(X0.shape), str(X1.shape)))
 		a,b = corr_Xt(X0[(snapshots_center):(snapshots_center+search_avg),:],X1[(snapshots_center+iwindow):(snapshots_center+iwindow+search_avg),:],fft_window_size=fft_window_size)
 		s_0x1[ii,:] = a
 		S_0x1[ii,:b.size] = b
@@ -152,10 +152,10 @@ def corr_FXt(x0,x1,fft_window_size=32768,search_range=None,search_avg=1):
 	#~ print "search_avg = {0}".format(search_avg)
 	#~ extend_search = search_avg + (0 if search_range == None else (search_range.max() - search_range.min() + 1))
 	#~ N_samples = fft_window_size*extend_search #min((2**int(floor(log2(x0.size))),2**int(floor(log2(x1.size)))))
-	N_samples = fft_window_size * (min((x0.size,x1.size))/fft_window_size)
+	N_samples = fft_window_size * (min((x0.size,x1.size))//fft_window_size)
 	#~ print "extend_search x fft_window_size = N_samples: {0} x {1} = {2}".format(extend_search,fft_window_size,N_samples)
-	X0 = fft(x0[:N_samples].reshape((N_samples/fft_window_size,fft_window_size)),axis=1)[:,:fft_window_size/2]
-	X1 = fft(x1[:N_samples].reshape((N_samples/fft_window_size,fft_window_size)),axis=1)[:,:fft_window_size/2]
+	X0 = fft(x0[:N_samples].reshape((N_samples//fft_window_size,fft_window_size)),axis=1)[:,:fft_window_size//2]
+	X1 = fft(x1[:N_samples].reshape((N_samples//fft_window_size,fft_window_size)),axis=1)[:,:fft_window_size//2]
 	
 	if (search_range == None):
 		s_peaks = None

@@ -184,16 +184,16 @@ class VDIFFrame(VDIFFrameHeader):
         # create our instance
         inst = super(VDIFFrame, cls).from_bin(bin_frame)
         if inst.invalid_data:
-            print "invalid data"
+            print("invalid data")
 
         # find where the data starts and ends in binary frame
         data_start = 16 if inst.legacy_mode else 32
         data_stop = inst.frame_length * 8
         data_size = data_stop - data_start
-        data_words = data_size / 4
+        data_words = data_size // 4
 
         # create empty data buffer
-        samp_per_word = 32 / inst.bits_per_sample
+        samp_per_word = 32 // inst.bits_per_sample
         inst.data = zeros(samp_per_word * data_words, int32)
 
         # unpack data into array
@@ -221,11 +221,11 @@ class VDIFFrame(VDIFFrameHeader):
         data_start = 16 if self.legacy_mode else 32
         data_stop = self.frame_length * 8
         data_size = data_stop - data_start
-        data_words = data_size / 4
+        data_words = data_size // 4
 
         # reinterpet data given our bits-per-sample
         samp_max = 2**self.bits_per_sample - 1
-        samp_per_word = 32 / self.bits_per_sample
+        samp_per_word = 32 // self.bits_per_sample
         for word_n in range(data_words):
             word = 0
 

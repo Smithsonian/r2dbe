@@ -60,4 +60,4 @@ if __name__ == "__main__":
                     raise RuntimeError("VTP {0} short, only {1}/{2} bytes".format(n_vdif,len(b_pkt),VTP_BYTE_SIZE))
     
     if args.verbose > 0:
-        print "unpacked {0} VDIF frames".format(n_vdif)
+        print("unpacked {0} VDIF frames".format(n_vdif))

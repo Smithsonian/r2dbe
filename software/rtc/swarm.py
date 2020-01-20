@@ -158,14 +158,14 @@ class BeeStream:
     
     @property
     def keys(self):
-        return self._frames.keys()
+        return list(self._frames.keys())
     
     def __init__(self,vdif):
         # set reference time for start of this stream
         self._ref_epoch = vdif.ref_epoch
         self._ref_second = vdif.s
         if use_half_sec_standard:
-            print "WARNING: Using half-second standard"
+            print("WARNING: Using half-second standard")
             self._ref_second *= 2
         self._ref_subsecond = vdif.u/286e6
         # get key for first frame
@@ -212,21 +212,21 @@ def read_bytes_from_file(filename,n_pkts,skip_pkts=0):
         if bytes_read < bytes_to_read:
             n_pkts_read = int(bytes_read/1056)
             if n_pkts_read * 1056 < bytes_read:
-                print "WARNING: Incomplete packet encountered, trimming {0} garbage bytes at the end".format(bytes_read - n_pkts_read*1056)
+                print("WARNING: Incomplete packet encountered, trimming {0} garbage bytes at the end".format(bytes_read - n_pkts_read*1056))
                 b = b[:n_pkts_read*1056]
-            print "INFO: Eof encountered after {0} packets".format(n_pkts_read)
+            print("INFO: Eof encountered after {0} packets".format(n_pkts_read))
         return n_pkts_read, b
 
 def read_packets_from_file(filename,n_pkts,skip_pkts=0):
     n_pkts_read,b = read_bytes_from_file(filename,n_pkts,skip_pkts=skip_pkts)
     vdif_list = [None]*n_pkts_read
-    for ii in xrange(n_pkts_read):
+    for ii in range(n_pkts_read):
         vdif_list[ii] = DBEFrame.from_bin(b[ii*1056:(ii+1)*1056],roll_by=0)#(128-70))
     return vdif_list
 
 def read_packets_from_bytes(b,n_pkts_read):
     vdif_list = [None]*n_pkts_read
-    for ii in xrange(n_pkts_read):
+    for ii in range(n_pkts_read):
         vdif_list[ii] = DBEFrame.from_bin(b[ii*1056:(ii+1)*1056],roll_by=0)#(128-70))
     return vdif_list
 
@@ -247,11 +247,11 @@ def read_spectra_from_file(filename,n_pkts,spectra=None,skip_pkts=0,f0=None):
         key_diff = diffkey(vdif_to_key(v),vdif_to_key(v0))
         v0 = v
         if key_diff != 0: 
-            print "({0},{1}) --> ({2},{3}): d={4} (f0={5},f={6})".format(v0.s,v0.u,v.s,v.u,key_diff,f0,v.f)
+            print("({0},{1}) --> ({2},{3}): d={4} (f0={5},f={6})".format(v0.s,v0.u,v.s,v.u,key_diff,f0,v.f))
             key_list.append(v_key)
         v_key = vdif_to_key(v)
         #~ print "s = {0}, u = {1}, f = {2}, c = {3}".format(v.s,v.u,v.f,v.c)
-        if not v_key in spectra.keys():
+        if not v_key in list(spectra.keys()):
             spectra[v_key] = zeros((2,128,16384),dtype=complex)
         for p in range(2):
             p_key = 'p{0}'.format(p)
@@ -259,8 +259,8 @@ def read_spectra_from_file(filename,n_pkts,spectra=None,skip_pkts=0,f0=None):
                 ch_key = 'ch{0}'.format(ch)
                 f = v.bdata[p_key][ch_key]['freq']
                 spectra[v_key][p,:,f] = v.bdata[p_key][ch_key]['data']
-    if len(spectra.keys()) == 0:
-        print "WARNING: no packets found for given FID={0}".format(f0)
+    if len(list(spectra.keys())) == 0:
+        print("WARNING: no packets found for given FID={0}".format(f0))
     return spectra,key_list
 
 def read_stream_from_vdif_list(vdif_list,n_pkts,skip_pkts=0,ref_time=None,stream=None):
@@ -281,29 +281,29 @@ def read_stream_from_vdif_list(vdif_list,n_pkts,skip_pkts=0,ref_time=None,stream
                 front_trimmed = True
                 ref_time = IntegerTime.from_vdif(v)
                 if npkts > 0:
-                    print "front trimmed {0} packets in total".format(npkts)
+                    print("front trimmed {0} packets in total".format(npkts))
         t = IntegerTime.from_vdif(v)
         #~ print "v.s = {0}, v.u = {1}, f = {2}, c = {3}".format(v.s,v.u,v.f,v.c)
         #~ print "t={0}, ref_time={1}".format(t,ref_time)
         try:
             dt = t - ref_time
         except MaxIntegerTimeDiff:
-            print "WARNING, MaxIntegerTimeDiff caught: dt = t - ref_time = {0} - {1}".format(t, ref_time)
+            print("WARNING, MaxIntegerTimeDiff caught: dt = t - ref_time = {0} - {1}".format(t, ref_time))
             continue
         if dt < 0:
             if dt < -1:
                 if not warned_packet_timestamp_earlier_by_more_than_one:
-                    print "WARNING, packet timestamp earlier than reference time by more than one B-engine frame"
-                    print "v.s = {0}, v.u = {1}, f = {2}, c = {3}".format(v.s,v.u,v.f,v.c)
-                    print "t={0}, ref_time={1}: dt = ".format(t,ref_time,dt)
+                    print("WARNING, packet timestamp earlier than reference time by more than one B-engine frame")
+                    print("v.s = {0}, v.u = {1}, f = {2}, c = {3}".format(v.s,v.u,v.f,v.c))
+                    print("t={0}, ref_time={1}: dt = ".format(t,ref_time,dt))
                     warned_packet_timestamp_earlier_by_more_than_one = True
             continue
-        if not v.f in printed_first_timestamp.keys():
+        if not v.f in list(printed_first_timestamp.keys()):
             #~ print "{0}: {1}".format(v.f,t)
             printed_first_timestamp[v.f] = True
         #~ print "t - ref_time = {0} - {1} = {2}".format(t,ref_time,dt)
         #~ print "s = {0}, u = {1}, f = {2}, c = {3}".format(v.s,v.u,v.f,v.c)
-        if not dt in stream.keys():
+        if not dt in list(stream.keys()):
             stream[dt] = zeros((2,128,16384),dtype=complex)
         for p in range(2):
             p_key = 'p{0}'.format(p)
@@ -323,7 +323,7 @@ def stream_to_spectra(stream):
     prev_key = k[0]-1
     for ii,kk in enumerate(k):
         if kk > prev_key+1:
-            print "WARNING, key > prev_key + 1: {0} > {1}+1, aborting".format(kk,prev_key+1)
+            print("WARNING, key > prev_key + 1: {0} > {1}+1, aborting".format(kk,prev_key+1))
             break
         spectra[:,ii*128:(ii+1)*128,:] = stream[kk]
         prev_key = kk
@@ -346,7 +346,7 @@ def read_spectra_from_file_cf_no_b(filename,n_pkts,skip_pkts=0):
                     #~ print "front trimmed {0} packets in total".format(npkts)
         f = v.f
         c = v.c
-        if f not in fid_idx.keys():
+        if f not in list(fid_idx.keys()):
             fid_idx[f] = {'window':0,'last_cid':c,'npkts':0}
         if c < fid_idx[f]['last_cid']:
             str_before = str(fid_idx[f])
@@ -355,7 +355,7 @@ def read_spectra_from_file_cf_no_b(filename,n_pkts,skip_pkts=0):
             fid_idx[f]['last_cid'] = c
             str_after = str(fid_idx[f])
             #~ print "update {0} from {1} to {2}: (v.f={3},v.c={3})".format(f,str_before,str_after,f,c)
-            print "new B: s = {0:12d} , u = {1:12d}".format(v.s,v.u)
+            print("new B: s = {0:12d} , u = {1:12d}".format(v.s,v.u))
         fid_idx[f]['last_cid'] = c
         fid_idx[f]['npkts'] += 1
         w = fid_idx[f]['window']
@@ -369,14 +369,14 @@ def read_spectra_from_file_cf_no_b(filename,n_pkts,skip_pkts=0):
                 try:
                     spectra[w][p,:,i] = v.bdata[p_key][ch_key]['data']
                 except IndexError:
-                    print "Index error: tried to access spectra[{0}], but len(spectra) = {1}".format(w,len(spectra))
+                    print("Index error: tried to access spectra[{0}], but len(spectra) = {1}".format(w,len(spectra)))
     s = zeros((2,128*len(spectra),16384),dtype=complex)
     for ii in range(len(spectra)):
         s[:,128*ii + arange(128),:] = spectra[ii]
     return s,fid_idx
 
 def spectra_timestamps(spectra):
-    keys = spectra.keys()
+    keys = list(spectra.keys())
     t = zeros(len(keys),dtype=float64)
     for (ii,key) in enumerate(keys):
         t[ii] = key_to_timestamp(key)
@@ -388,7 +388,7 @@ def relative_spectra_keys(spectra):
     t = spectra_timestamps(spectra)
     t0 = t.min()
     idx_sorted = t.argsort()
-    return (t[idx_sorted]-t0)/dt
+    return (t[idx_sorted]-t0)//dt
 
 def key_to_timestamp(k):
     t = k[0] + k[1]/286e6
@@ -421,9 +421,9 @@ def diffkey(k,k0):
             if (u - u0)%du > tol_u:
                 #~ print 4# new frame cannot appear later and not be close to
                 # an integer number of frames later, error
-                print "ERROR: v = ({0},{1}), (s0,u0) = ({2},{3}); tol_u = {4}, du = {5}, (u - u0)%du = {6}".format(
+                print("ERROR: v = ({0},{1}), (s0,u0) = ({2},{3}); tol_u = {4}, du = {5}, (u - u0)%du = {6}".format(
                     s,u,s0,u0,tol_u,du,(u-u0)%du
-                )
+                ))
                 #~ print "b"
                 return -1
             else:
@@ -436,9 +436,9 @@ def diffkey(k,k0):
             if (u+wrap_add - u0)%du > tol_u:
                 #~ print 7# unwrapped new frame cannot appear later and not be 
                 # close to an integer number of frames later, error
-                print "ERROR: v = ({0},{1}), (s0,u0) = ({2},{3}); tol_u = {4}, du = {5}, (u+wrap_add - u0)%du = {6}".format(
+                print("ERROR: v = ({0},{1}), (s0,u0) = ({2},{3}); tol_u = {4}, du = {5}, (u+wrap_add - u0)%du = {6}".format(
                     s,u,s0,u0,tol_u,du,(u+wrap_add - u0)%du
-                )
+                ))
                 #~ print "d"
                 return -1
             else:
@@ -469,7 +469,7 @@ class IntegerTime:
     
     @property
     def tol_clk(self):
-        return self.step_clk / 4
+        return self.step_clk // 4
     
     @property
     def wrap_clk(self):
@@ -491,7 +491,7 @@ class IntegerTime:
     def advance(self, by=1):
         self.clk += self.step_clk*by
         if self.clk > self.wrap_clk:
-            self.sec += self.clk / self.wrap_clk
+            self.sec += self.clk // self.wrap_clk
             self.clk = self.clk % self.wrap_clk
     
     def __str__(self):
@@ -502,7 +502,7 @@ class IntegerTime:
         approach.sec += other.sec
         approach.clk += other.clk
         if approach.clk > approach.wrap_clk:
-            approach.sec += approach.clk / approach.wrap_clk
+            approach.sec += approach.clk // approach.wrap_clk
             approach.clk = approach.clk % approach.wrap_clk
         return approach
     
@@ -523,7 +523,7 @@ class IntegerTime:
                 approach.clk += approach.step_clk
                 #~ print approach
                 if approach.clk > approach.wrap_clk:
-                    approach.sec += approach.clk / approach.wrap_clk
+                    approach.sec += approach.clk // approach.wrap_clk
                     approach.clk = approach.clk % approach.wrap_clk
                 #~ print approach
             #~ print "self > approach: {0} > {1}".format(self,approach)

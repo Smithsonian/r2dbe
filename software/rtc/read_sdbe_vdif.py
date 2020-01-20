@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/uython
 # -*- coding: utf-8 -*-
 #
 #  read_sdbe_vdif.py
@@ -23,7 +23,7 @@ import swarm
 # nump, scipy
 from numpy import empty, zeros, int8, array, concatenate, ceil, arange, roll, complex64, any, mean, median, nan, nonzero, isnan
 from numpy.fft import irfft
-from scipy.interpolate import interp1d
+#from scipy.interpolate import interp1d
 
 # other useful ones
 from logging import getLogger
@@ -33,7 +33,7 @@ from datetime import datetime
 from defines import SWARM_XENG_PARALLEL_CHAN, SWARM_N_INPUTS, SWARM_N_FIDS, SWARM_TRANSPOSE_SIZE, SWARM_CHANNELS
 
 SWARM_CHANNELS_PER_PKT = 8
-SWARM_PKTS_PER_BCOUNT = SWARM_CHANNELS/SWARM_CHANNELS_PER_PKT
+SWARM_PKTS_PER_BCOUNT = SWARM_CHANNELS//SWARM_CHANNELS_PER_PKT
 SWARM_SAMPLES_PER_WINDOW = 2*SWARM_CHANNELS
 SWARM_RATE = 4576e6 # 10/11
 #~ SWARM_RATE = 3328e6 # 8/11 #
@@ -50,7 +50,7 @@ FRAME_SIZE_BYTES = 1056
 #~ SWARM_TRANSPOSE_SIZE = 128
 #~ SWARM_CHANNELS = 2**14
 #~ SWARM_CHANNELS_PER_PKT = 8
-#~ SWARM_PKTS_PER_BCOUNT = SWARM_CHANNELS/SWARM_CHANNELS_PER_PKT
+#~ SWARM_PKTS_PER_BCOUNT = SWARM_CHANNELS//SWARM_CHANNELS_PER_PKT
 #~ SWARM_SAMPLES_PER_WINDOW = 2*SWARM_CHANNELS
 #~ SWARM_RATE = 2496e6
 
@@ -122,7 +122,7 @@ def read_spectra_from_file(filename,bcount_offset=1,num_bcount=1):
 		logger.debug('Processing file "%s"' % this_file)
 		
 		# reset timestamp for this stream
-		timestamps_at_first_usable_packet.append(datetime(2015,01,01,0,0,0))
+		timestamps_at_first_usable_packet.append(datetime(2015,0o1,0o1,0,0,0))
 		with open(this_file,'r') as fh:
 			while True:
 				t0 = datetime.now()
@@ -150,7 +150,7 @@ def read_spectra_from_file(filename,bcount_offset=1,num_bcount=1):
 					# packets are in order that bcount increases monotonically
 					if (this_frame.b < (bcount_start-1)):
 						bcount_deficit = (bcount_start-1) - this_frame.b
-						vdif_deficit = bcount_deficit*(SWARM_PKTS_PER_BCOUNT/len(ETH_IFACE_LIST))
+						vdif_deficit = bcount_deficit*(SWARM_PKTS_PER_BCOUNT//len(ETH_IFACE_LIST))
 						logger.debug('bcount is behind by at least %d whole frames, skipping %d VDIF frames' % (bcount_deficit,vdif_deficit))
 						fh.seek(vdif_deficit*FRAME_SIZE_BYTES,1)
 					T_overhead = T_overhead + (datetime.now() - t0).total_seconds()
@@ -202,7 +202,7 @@ def read_spectra_from_file(filename,bcount_offset=1,num_bcount=1):
 	
 	return spectra_real,spectra_imag,timestamps_at_first_usable_packet
 
-def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_eth{0:d}',sfx_list=range(1,5)):
+def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_eth{0:d}',sfx_list=list(range(1,5))):
 	"""
 	Read SWARM DBE spectral data from multiple files.
 	
@@ -232,7 +232,7 @@ def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_
 	a real discrete Fourier transform.
 	"""
 
-	print "hello world!"
+	print("hello world!")
 	
 	# some benchmarking statistics
 	t0_total = datetime.now()
@@ -269,7 +269,7 @@ def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_
 	logger.debug('bcount_start set to %d' % bcount_start)
 
 	b_list = []
-	print "hello world!"
+	print("hello world!")
 	t0 = datetime.now()
 	for this_file in input_filenames:
 		with open(this_file,'r') as fh:
@@ -308,7 +308,7 @@ def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_
 		logger.debug('Processing file "%s"' % this_file)
 		
 		# reset timestamp for this stream
-		timestamps_at_first_usable_packet.append(datetime(2015,01,01,0,0,0))
+		timestamps_at_first_usable_packet.append(datetime(2015,0o1,0o1,0,0,0))
 		with open(this_file,'r') as fh:
 			while True:
 				t0 = datetime.now()
@@ -336,7 +336,7 @@ def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_
 					# packets are in order that bcount increases monotonically
 					if (this_frame.b < (bcount_start-1)):
 						bcount_deficit = (bcount_start-1) - this_frame.b
-						vdif_deficit = bcount_deficit*(SWARM_PKTS_PER_BCOUNT/len(ETH_IFACE_LIST))
+						vdif_deficit = bcount_deficit*(SWARM_PKTS_PER_BCOUNT//len(ETH_IFACE_LIST))
 						logger.debug('bcount is behind by at least %d whole frames, skipping %d VDIF frames' % (bcount_deficit,vdif_deficit))
 						fh.seek(vdif_deficit*FRAME_SIZE_BYTES,1)
 					T_overhead = T_overhead + (datetime.now() - t0).total_seconds()
@@ -389,7 +389,7 @@ def read_spectra_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_
 	return spectra_real,spectra_imag,timestamps_at_first_usable_packet
 	
 
-def read_b11_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_eth{0:d}',sfx_list=range(1,5)):
+def read_b11_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_eth{0:d}',sfx_list=list(range(1,5))):
 	"""
 	Read B-engine data in 11/11 format from the given files and 
 	reconstruct the spectrum.
@@ -580,10 +580,10 @@ def read_b11_from_files(filename_base,bcount_offset=1,num_bcount=1,suffix='_eth{
 						#~ stop_chan = start_chan + SWARM_XENG_PARALLEL_CHAN
 						# should it be this?
 						if chan_id % 2 == 0:
-							start_chan = 16 * (int(chan_id/2) * SWARM_N_FIDS + fid)
+							start_chan = 16 * (int(chan_id//2) * SWARM_N_FIDS + fid)
 							stop_chan = start_chan + 8
 						else:
-							start_chan = 16 * (int(chan_id/2) * SWARM_N_FIDS + fid) + 8
+							start_chan = 16 * (int(chan_id//2) * SWARM_N_FIDS + fid) + 8
 							stop_chan = start_chan + 8
 						
 						# set time-offset of this data
@@ -623,12 +623,12 @@ def aux11_is_cluster(bs_list,bu_list,bsu_ref=None):
 	bu_ref = bsu_ref[1]
 	# return value is a boolean list which indicates indecies of bs/bu items that belong in given cluster
 	clst = [False]*len(bs_list)
-	for idx,bs,bu in zip(xrange(len(bs_list)),bs_list,bu_list):
+	for idx,bs,bu in zip(range(len(bs_list)),bs_list,bu_list):
 		if bs == bs_ref:
 			# if in same second as reference, need to be within nth of a step from bu_ref
-			if (bu > (bu_ref - AUX11_BU_STEP/16)) and (bu < (bu_ref + AUX11_BU_STEP/16)):
-				#~ print "bu > (bu_ref - AUX11_BU_STEP/16) = %d > (%d - %d): %s" % (bu,bu_ref,AUX11_BU_STEP/16,(bu > (bu_ref - AUX11_BU_STEP/16)))
-				#~ print "bu < (bu_ref + AUX11_BU_STEP/16) = %d > (%d - %d): %s" % (bu,bu_ref,AUX11_BU_STEP/16,(bu < (bu_ref + AUX11_BU_STEP/16)))
+			if (bu > (bu_ref - AUX11_BU_STEP//16)) and (bu < (bu_ref + AUX11_BU_STEP//16)):
+				#~ print "bu > (bu_ref - AUX11_BU_STEP//16) = %d > (%d - %d): %s" % (bu,bu_ref,AUX11_BU_STEP//16,(bu > (bu_ref - AUX11_BU_STEP//16)))
+				#~ print "bu < (bu_ref + AUX11_BU_STEP//16) = %d > (%d - %d): %s" % (bu,bu_ref,AUX11_BU_STEP//16,(bu < (bu_ref + AUX11_BU_STEP//16)))
 				#~ print 'a',bu,bu_ref
 				clst[idx] = True
 		elif bs == bs_ref + 1:
@@ -639,7 +639,7 @@ def aux11_is_cluster(bs_list,bu_list,bsu_ref=None):
 		# in all other cases, assume not in cluster; in particular:
 		#	1) for bs < bs_ref: bs is less than the minimum second in all (bs,bu) pairs
 		#	2) for bs > bs_ref + 1: bs is more than one second ahead of other elements
-		#	3) |bu - bu_ref| >= AUX11_BU_STEP/16: bu is much more than expected from reference
+		#	3) |bu - bu_ref| >= AUX11_BU_STEP//16: bu is much more than expected from reference
 	return clst, bsu_ref
 
 def aux11_map_bsu_index(bs,bu,bsu_master):
@@ -673,11 +673,11 @@ def aux11_map_bsu_index(bs,bu,bsu_master):
 			return -1
 		elif bs == bsu_X[0]:
 			# if within same second, test how many steps ahead (can be negative)
-			n_step = int(round((bu-bsu_X[1]) / AUX11_BU_STEP))
+			n_step = int(round((bu-bsu_X[1]) // AUX11_BU_STEP))
 			#~ print 5
 			return len(bsu_master)-1+n_step
 	# last resort, manually check all existing references (possible duplication of n_step
-	for idx in xrange(1,len(bsu_master)-1):
+	for idx in range(1,len(bsu_master)-1):
 		if aux11_is_cluster(bs,bu,bsu_ref=bsu_master[idx])[0]:
 			#~ print 6
 			return idx
@@ -713,17 +713,17 @@ def apply_per_atoh_channel_shift(Xs,shift_per_channel,truncate_invalid=False,in_
 	# apply shift per channel
 	if (not in_128):
 		for fid in range(SWARM_N_FIDS):
-			for ch_id in range(SWARM_CHANNELS/(SWARM_N_FIDS*SWARM_XENG_PARALLEL_CHAN)):
+			for ch_id in range(SWARM_CHANNELS//(SWARM_N_FIDS*SWARM_XENG_PARALLEL_CHAN)):
 				start_chan = ch_id*SWARM_N_FIDS*SWARM_XENG_PARALLEL_CHAN + fid*SWARM_N_FIDS
 				for ii in range(SWARM_XENG_PARALLEL_CHAN):
 					Xs_ret[:,start_chan+ii] = roll(Xs[:,start_chan+ii],shift_per_channel[ii],axis=0)
 	else:
-		N_passes = Xs.shape[0]/SWARM_TRANSPOSE_SIZE
+		N_passes = Xs.shape[0]//SWARM_TRANSPOSE_SIZE
 		for ipass in range(N_passes):
 			start_snap = ipass*SWARM_TRANSPOSE_SIZE
 			stop_snap = start_snap + SWARM_TRANSPOSE_SIZE
 			#~ for fid in range(SWARM_N_FIDS):
-				#~ for ch_id in range(SWARM_CHANNELS/(SWARM_N_FIDS*SWARM_XENG_PARALLEL_CHAN)):
+				#~ for ch_id in range(SWARM_CHANNELS//(SWARM_N_FIDS*SWARM_XENG_PARALLEL_CHAN)):
 					#~ start_chan = ch_id*SWARM_N_FIDS*SWARM_XENG_PARALLEL_CHAN + fid*SWARM_N_FIDS
 					#~ for ii in range(SWARM_XENG_PARALLEL_CHAN):
 						#~ Xs_ret[start_snap:stop_snap,start_chan+ii] = roll(Xs[start_snap:stop_snap,start_chan+ii],shift_per_channel[ii],axis=0)
@@ -774,7 +774,7 @@ def corrective_reordering(Xs,atoh_shift_vec=None,idx_shift_range=None):
 	if idx_shift_range is not None:
 		# do whole-spectrum shifts
 		N_s = Xsc.shape[0]
-		for jj in range(N_s/128):
+		for jj in range(N_s//128):
 			for ii in range(idx_shift_range[0],idx_shift_range[1]):
 				if ii + 128*(jj+1) < N_s:
 					Xsc[ii+128*jj,:] = Xsc[ii+128*(jj+1),:]
@@ -828,6 +828,6 @@ def diagnose_window_offsets(Xs,Xr,offset):
 	idx_shift = s_peak_to_std_1 > mean((s_peak_to_std_1.max(),s_peak_to_std_1.min()))
 	# the two idx_shift truth-vectors should be complementary
 	if (any(idx_shift & idx_shift_)):
-		print "warning: result is not self-consistent"
+		print("warning: result is not self-consistent")
 	
 	return idx_shift,s_peak_to_std_0,s_peak_to_std_1

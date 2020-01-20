@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from ConfigParser import NoOptionError, NoSectionError, RawConfigParser
+from configparser import NoOptionError, NoSectionError, RawConfigParser
 from datetime import datetime, timedelta
 from socket import gethostname
 from subprocess import call
@@ -8,7 +8,7 @@ from time import sleep
 from threading import Thread
 
 import numpy as np
-import scipy.interpolate as ip
+#import scipy.interpolate as ip
 
 import matplotlib.pyplot as plt
 
@@ -44,17 +44,17 @@ if __name__ == "__main__":
     fh_histo = plt.figure()
     sbplt = 1
     
-    print "Processing {0}_{1}".format(misc_exp,scan_name)
+    print("Processing {0}_{1}".format(misc_exp,scan_name))
     for icorr,cs in enumerate(corr_sets):
         config_corrN_section = CONFIG_CORRN_SECTION_FMT.format(int(cs))
         sdbe_name,sdbe_receiver = rcp.get(config_corrN_section,CONFIG_CORRN_SDBE).split(',')
-        print "Check #{0} of {2}: {1}".format(icorr+1,sdbe_name,len(corr_sets))
+        print("Check #{0} of {2}: {1}".format(icorr+1,sdbe_name,len(corr_sets)))
         
         # read SBDE data
-        print "   read SBDE data"
+        print("   read SBDE data")
         st = None
         X_sdbe = None
-        N_sdbe_frames = 4096
+        N_sdbe_frames = 512
         for ii in [0,1,2,3]:#range(4):
             sdbe_filename = "/".join(["dat",get_flatfile_filename(misc_exp,sdbe_name,scan_name,ii)])
             #~ _X_sdbe,tmp_sdbe = swarm.read_spectra_from_file_cf_no_b(sdbe_filename,N_sdbe_frames)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
         zz = np.array([yy[ii][0].astype(float)/yy[ii][0].sum() for ii in range(2)]).transpose()
 
         plt.figure(fh_autos.number)
-        plt.subplot(2,1,sbplt)
+        plt.subplot(len(corr_sets),1,sbplt)
         plt.plot(chan_freq/1e6,S_s)
         if sbplt == 2:
             plt.xlabel("Frequency [MHz]")
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         plt.title("{0}".format(sdbe_name))
 
         plt.figure(fh_histo.number)
-        plt.subplot(2,1,sbplt)
+        plt.subplot(len(corr_sets),1,sbplt)
         [plt.bar(np.array([-2,-1,0,1])+[-0.25,0][ii],zz[:,ii],width=0.25,color='bg'[ii]) for ii in range(2)]
         plt.ylim((0,1))
         plt.grid()

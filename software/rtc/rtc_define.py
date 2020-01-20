@@ -52,6 +52,6 @@ def get_flatfile_filename(exp,dut,scan,stream):
     )
 
 def threaded_call(call_str):
-    print call_str
+    print(call_str)
     call(call_str,shell=True)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from ConfigParser import NoOptionError, NoSectionError, RawConfigParser
+from configparser import NoOptionError, NoSectionError, RawConfigParser
 from datetime import datetime, timedelta
 from socket import gethostname
 from subprocess import call
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         dut_host = dut_hosts[ii]
         dut_type = dut_types[ii]
         call_str = get_call_str(dut_type,dut_host,dut_name,misc_exp,scan_time,scan_duration,scan_sizes[ii],scan_name)
-        print "Executing: {call}".format(call=call_str)
+        print("Executing: {call}".format(call=call_str))
         threads.append(Thread(target=threaded_call,args=(call_str,)))
         threads[ii].start()
     for ii in range(len(dut_names)):

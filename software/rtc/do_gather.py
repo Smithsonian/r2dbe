@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from ConfigParser import NoOptionError, NoSectionError, RawConfigParser
+from configparser import NoOptionError, NoSectionError, RawConfigParser
 from datetime import datetime, timedelta
 from socket import gethostname
 from time import sleep
@@ -13,7 +13,7 @@ SGLINEARIZE_TEMPLATE = "/home/oper/obs/bin/sglinearize.py -b 4 -s {0} -o {1} {2}
 REMOTE_SGLINEARIZE_TEMPLATE = "ssh {0} '/home/oper/obs/bin/sglinearize.py -b {4} -s {1} -o {2} {3}'"
 COPY_TEMPLATE = "cp {0} {1}"
 REMOTE_COPY_TEMPLATE = "scp {0}:{1} {2}"
-UNPACK_8PAC_TEMPLATE = "./express_8unpac.py -n {2} {0} {1}"
+UNPACK_8PAC_TEMPLATE = "python2 express_8unpac.py -n {2} {0} {1}"
 RM_8PAC_TEMPLATE = "rm {0}"
 
 def stride(dut_type):
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         help='read configuration from FILE')
     parser.add_argument('-n','--num-unpack',metavar="NPKT",type=int,default=32768,
         help='unpack this many B-engine packets (passed to -n parameter in express_8unpack.py, default is 32768)')
-    parser.add_argument('-b','--num-blocks',metavar="NBLK",type=int,default=10,
+    parser.add_argument('-b','--num-blocks',metavar="NBLK",type=int,default=1,
         help='copy this many blocks per mk6 input stream (passed to -b parameter in sglinearize.py, default is 10)')
     args = parser.parse_args()
     
@@ -69,9 +69,9 @@ if __name__ == "__main__":
     now = datetime.utcnow()
     while datetime.utcnow() < scan_done:
         dsleep = (scan_done - now).seconds
-        print "Scan not yet recorded, sleeping for {0} seconds...".format(dsleep)
+        print("Scan not yet recorded, sleeping for {0} seconds...".format(dsleep))
         sleep(dsleep)
-        print "...should be done now."
+        print("...should be done now.")
         sleep(1)
     
     # submit the gathers
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         sg_paths = input_stream_paths(dut_type)
         for ii,sg_path in enumerate(sg_paths):
             input_pattern = '/'.join((sg_path,sg_filename))
-            print input_pattern
+            print(input_pattern)
             
             # create output filename
             out_filename = get_flatfile_filename(misc_exp,dut_name,scan_name,ii)
@@ -135,7 +135,7 @@ if __name__ == "__main__":
                 call_str = COPY_TEMPLATE.format(out_path,dest)
             else:
                 call_str = REMOTE_COPY_TEMPLATE.format("@".join(["oper",dut_host]),out_path,dest)
-            print "Executing: {call}".format(call=call_str)
+            print("Executing: {call}".format(call=call_str))
             threads.append(Thread(target=threaded_call,args=(call_str,)))
             threads[n_thread].start()
             n_thread += 1

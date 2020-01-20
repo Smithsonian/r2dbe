@@ -54,7 +54,7 @@ def read_from_file(filename,num_frames,offset_frames=0,samples_per_window=R2DBE_
 	x_r2dbe[:] = -128
 	psn = 0;
 	vdif0 = None
-	with open(filename,'r') as f:
+	with open(filename,'rb') as f:
 		if (offset_frames > 0):
 			logger.info('Reading from offset of %d VDIF frames.' % offset_frames)
 			offset_bytes = 0
